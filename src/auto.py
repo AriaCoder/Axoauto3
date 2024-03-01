@@ -4,8 +4,8 @@ from vex import *
 
 
 class Bot:
-    MODES = ["MANUAL", "AUTO_RED", "BASKET_2", "BASKET_1", "BASKET_3"]
-    MODE_COLORS = [Color.BLACK, Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE]
+    MODES = ["AUTO.PY", "AUTO_RED", "BASKET_2", "BASKET_1", "BASKET_3"]
+    MODE_COLORS = [Color.BLUE, Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE]
     MODE_PEN_COLORS = [Color.WHITE, Color.WHITE, Color.BLACK, Color.BLACK, Color.WHITE]
 
     def __init__(self):
@@ -22,7 +22,6 @@ class Bot:
         self.setupDrive()
         self.setupIntake()
         self.setupBasket()
-        self.setupController()
         self.setupSelector()
 
     def setupPortMappings(self):
@@ -47,17 +46,6 @@ class Bot:
         self.basket.set_velocity(100, PERCENT)
         self.basketUpBumper.pressed(self.onBasketUpBumper)
         self.basketDownBumper.pressed(self.onBasketDownBumper)
-
-    def setupController(self):
-        self.controller.buttonLUp.pressed(self.onLUp)
-        self.controller.buttonLDown.pressed(self.onLDown)
-        self.controller.buttonFUp.pressed(self.onFUp)
-        self.controller.buttonRUp.pressed(self.onRUp)
-        self.controller.buttonRUp.released(self.onRUpReleased)
-        self.controller.buttonRDown.pressed(self.onRDown)
-        self.controller.buttonRDown.released(self.onRDownReleased)
-        # Delay to make sure events are registered correctly.
-        wait(15, MSEC)
 
     def setupSelector(self):
         self.brain.buttonRight.pressed(self.onBrainButtonRight)
@@ -86,14 +74,7 @@ class Bot:
                 self.runBasket1()
             elif self.modeNumber == 4:
                 self.runBasket3()
-            #elif self.modeNumber == 5:
-               # self.runLeftSide()
-            else:
-                self.isAutoRunning = False
-                self.runManual()
-            self.isAutoRunning = False
-            self.print("Done")
-
+            
     def onBrainButtonRight(self):
         self.applyMode(self.modeNumber + 1)
 
@@ -129,21 +110,9 @@ class Bot:
             self.basket.set_timeout(60, SECONDS)
             self.basket.stop(COAST)
             
-    def onLUp(self):
-        self.startIntake()
-    
     def startIntake(self):
         self.lowerBasket()
         self.intake.spin(FORWARD, 100, PERCENT)
-
-    def onEUp(self):
-        pass
-
-    def onLDown(self):
-        self.intake.spin(REVERSE, 100, PERCENT)
-
-    def onFUp(self):
-        self.stopAll()
 
     def raiseBasket(self):
         self.intake.stop()
@@ -152,18 +121,6 @@ class Bot:
             self.basket.spin_for(REVERSE, 9000, DEGREES, 100, PERCENT, wait=True)
             self.basket.set_timeout(60, SECONDS)
             self.basket.stop(HOLD)
-
-    def onRUp(self):
-        self.raiseBasket()
-
-    def onRUpReleased(self):
-        self.basket.stop(HOLD)  # Let blocks fall down, stay put
-
-    def onRDown(self):
-        self.lowerBasket()
-
-    def onRDownReleased(self):
-        self.basket.stop(HOLD)  # Hold basket in place
 
     def onBasketUpBumper(self):
         self.basket.stop(COAST)
@@ -200,7 +157,6 @@ class Bot:
             color = Color.RED
         self.healthLed.set_color(color)
         
-
     def setupAutoDriveTrain(self, calibrate=True):
         # Use DriveTrain in autonomous. Easier to do turns.
         # Last updated on Nov 14, 2023:
@@ -286,18 +242,6 @@ class Bot:
 
     def run(self):
         self.setup()
-        self.runManual()
-
-    def runManual(self):
-        i = 0  # start interval 
-        self.print("Extreme Axolotls!")
-        while(not self.isAutoRunning):
-            i += 1 # add interval every 100 milliseconds
-            self.updateLeftDrive(5)
-            self.updateRightDrive(5)
-            if i % 50 == 0: 
-                self.checkHealth()  # check health every 5 seconds, using modulus
-            sleep(100)
 
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
@@ -321,15 +265,10 @@ class Bot:
          #self.autoDrive(REVERSE, 150, MM, 50, PERCENT)
          #self.autoTurn(LEFT, 45, DEGREES, 50, PERCENT)
 
-        
-
          #self.autoDrive(REVERSE, 270, MM, 50, PERCENT, wait=True, timeoutSecs=2)
          self.basket.set_timeout(2, SECONDS)
          self.basket.spin_for(REVERSE, 2.5, TURNS)
          self.basket.set_timeout( 4 ,SECONDS)
-         
-        
-
         self.stopAll()
 
     def runBasket1(self):
