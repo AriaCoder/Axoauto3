@@ -4,20 +4,21 @@ from vex import *
 
 
 class Bot:
-    MODES = ["AUTO.PY", "AUTO_RED", "BASKET_2", "BASKET_1", "BASKET_3"]
-    MODE_COLORS = [Color.BLUE, Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE]
-    MODE_PEN_COLORS = [Color.WHITE, Color.WHITE, Color.BLACK, Color.BLACK, Color.WHITE]
+    MODES = ["AUTO_RED", "GOAL_2", "GOAL_1", "GOAL_3"]
+    MODE_COLORS = [Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE]
+    MODE_PEN_COLORS = [Color.WHITE, Color.BLACK, Color.BLACK, Color.WHITE]
 
     def __init__(self):
         self.isAutoRunning = False
-        self.modeNumber = 0
-        self.isManualStarted = False
+        self.modeNumber = -1
+        self.isCalibrated = False
         self.cancelCalibration = False
+        self.screenColor = Color.BLACK
+        self.penColor = Color.WHITE
 
     def setup(self):
         self.brain = Brain()
         self.inertial = Inertial()
-        self.controller = Controller()
         self.setupPortMappings()
         self.setupDrive()
         self.setupIntake()
@@ -52,29 +53,27 @@ class Bot:
         self.brain.buttonLeft.pressed(self.onBrainButtonLeft)
         self.brain.buttonCheck.pressed(self.onBrainButtonCheck)
 
-    def print(self, message):
-        screenColor = Bot.MODE_COLORS[self.modeNumber]
-        penColor = Bot.MODE_PEN_COLORS[self.modeNumber]
-        self.brain.screen.set_font(FontType.MONO20)
-        self.brain.screen.set_pen_color(penColor)
-        self.brain.screen.set_fill_color(screenColor)
-        self.brain.screen.print(message)
-        self.brain.screen.new_line()
-
     def onBrainButtonCheck(self):
         if self.isAutoRunning:
             self.print("Already running")
+        elif not self.isCalibrated and self.modeNumber > 0:  # Red block has no calibration
+            if self.setupAutoDriveTrain():
+                self.print("Ready!")
+            else:
+                self.print("Try again?")
         else:
             self.isAutoRunning = True
-            if self.modeNumber == 1:
+            if self.modeNumber == 0:
                 self.runAutoRed()
+            elif self.modeNumber == 1:
+                self.runGoal2()
             elif self.modeNumber == 2:
-                self.runBasket2()
+                self.runGoal1()
             elif self.modeNumber == 3:
-                self.runBasket1()
-            elif self.modeNumber == 4:
-                self.runBasket3()
-            
+                self.runGoal3()
+            self.isAutoRunning = False
+            self.print("Done")
+
     def onBrainButtonRight(self):
         self.applyMode(self.modeNumber + 1)
 
@@ -86,20 +85,28 @@ class Bot:
             self.cancelCalibration = True
         if self.isAutoRunning:
             self.print("Running auto already")
-        elif self.isManualStarted:
-            self.print("In manual mode")
         else:
             self.modeNumber = newMode % len(Bot.MODES)
-            self.fillScreen(Bot.MODE_COLORS[self.modeNumber])
+            self.fillScreen(Bot.MODE_COLORS[self.modeNumber], Bot.MODE_PEN_COLORS[self.modeNumber])
+            self.print(Bot.MODES[self.modeNumber])
 
-    def fillScreen(self, screenColor):
-        self.brain.screen.set_pen_color(screenColor)
+    def fillScreen(self, screenColor, penColor):
+        self.screenColor = screenColor
+        self.penColor = penColor
         self.brain.screen.clear_screen()
-        self.brain.screen.set_font(FontType.MONO20)
         self.brain.screen.set_fill_color(screenColor)
+        self.brain.screen.set_pen_color(screenColor)
         self.brain.screen.draw_rectangle(0, 0, 170, 100, screenColor)
+        self.brain.screen.set_pen_color(penColor)
+        self.brain.screen.set_font(FontType.MONO20)
         self.brain.screen.set_cursor(1, 1)
-        self.print(Bot.MODES[self.modeNumber])
+        
+    def print(self, message):
+        penColor = Bot.MODE_PEN_COLORS[self.modeNumber]
+        self.brain.screen.set_fill_color(self.screenColor)
+        self.brain.screen.set_pen_color(self.penColor)
+        self.brain.screen.print(message)
+        self.brain.screen.new_line()
 
     def lowerBasket(self):
         if not self.basketDownBumper.pressing():
@@ -109,7 +116,7 @@ class Bot:
             self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=True)
             self.basket.set_timeout(60, SECONDS)
             self.basket.stop(COAST)
-            
+
     def startIntake(self):
         self.lowerBasket()
         self.intake.spin(FORWARD, 100, PERCENT)
@@ -137,7 +144,7 @@ class Bot:
         self.motorRight.spin(REVERSE)
 
     def stopAll(self):
-        if self.driveTrain is not None and not self.isManualStarted:
+        if self.driveTrain:
             self.driveTrain.stop(COAST)
         self.intake.stop(COAST)
         self.basket.stop(COAST)
@@ -157,6 +164,7 @@ class Bot:
             color = Color.RED
         self.healthLed.set_color(color)
         
+
     def setupAutoDriveTrain(self, calibrate=True):
         # Use DriveTrain in autonomous. Easier to do turns.
         # Last updated on Nov 14, 2023:
@@ -180,36 +188,21 @@ class Bot:
         countdown = 3000/50  
         while (self.inertial.is_calibrating()
                 and countdown > 0
-                and not self.cancelCalibration
-                and not self.isManualStarted):
+                and not self.cancelCalibration):
             wait(50, MSEC)
             countdown = countdown - 1
-        if self.cancelCalibration or self.isManualStarted:
+        if self.cancelCalibration:
             self.print("Cancelled Calibration!")
             return False
         elif countdown > 0 and not self.inertial.is_calibrating():
             self.print("Calibrated")
+            self.brain.play_sound(SoundType.TADA)
+            self.isCalibrated = True
             return True
         else:
             self.stopAll()
             self.print("FAILED Calibration")
             return False
-                
-    def updateLeftDrive(self, joystickTolerance: int):
-        velocity: float = self.controller.axisA.position()
-        if math.fabs(velocity) > joystickTolerance:
-            self.motorLeft.set_velocity(velocity, PERCENT)
-            self.isManualStarted = True
-        else:
-            self.motorLeft.set_velocity(0, PERCENT)
-
-    def updateRightDrive(self, joystickTolerance: int):
-        velocity: float = self.controller.axisD.position()
-        if math.fabs(velocity) > joystickTolerance:
-            self.motorRight.set_velocity(velocity, PERCENT)
-            self.isManualStarted = True
-        else:
-            self.motorRight.set_velocity(0, PERCENT)
 
     def autoDrive(self, direction, distance, units=DistanceUnits.IN,
                   velocity=100, units_v:VelocityPercentUnits=VelocityUnits.RPM,
@@ -242,6 +235,10 @@ class Bot:
 
     def run(self):
         self.setup()
+        self.fillScreen(Color.BLUE_VIOLET, Color.WHITE)
+        self.print("Extreme")
+        self.print("Axolotls!")
+        # Wait for someone to select a program to run
 
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
@@ -249,53 +246,35 @@ class Bot:
         self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
         self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
 
-    def runBasket2(self):
-        if self.setupAutoDriveTrain():
-         self.intake.spin(FORWARD, 100, PERCENT)
-         self.autoDrive(FORWARD, 300, MM, 25, PERCENT)
-         self.autoTurn(RIGHT, 120, DEGREES, 50, PERCENT)
-         self.autoDrive(REVERSE, 600, MM, 50, PERCENT, timeoutSecs=2)
-         #self.autoTurn(RIGHT, 28, DEGREES, 50, PERCENT)
-         #self.autoDrive(FORWARD, 150, MM, 50 , PERCENT)
-         #self.autoTurn(RIGHT, 56, DEGREES, 50, PERCENT, timeoutSecs=2)
-         #self.autoDrive(REVERSE, 120, MM, 50, PERCENT, timeoutSecs=2)
-         #self.basket.spin_for(REVERSE, 0.9, TURNS)
-         #self.basket.set_timeout( 4, SECONDS)
-         #self.basket.spin_for(FORWARD, 0.9, TURNS)
-         #self.autoDrive(REVERSE, 150, MM, 50, PERCENT)
-         #self.autoTurn(LEFT, 45, DEGREES, 50, PERCENT)
-
-         #self.autoDrive(REVERSE, 270, MM, 50, PERCENT, wait=True, timeoutSecs=2)
-         self.basket.set_timeout(2, SECONDS)
-         self.basket.spin_for(REVERSE, 2.5, TURNS)
-         self.basket.set_timeout( 4 ,SECONDS)
+    def runGoal1(self):
+        self.intake.spin(FORWARD, 100, PERCENT)
+        self.autoDrive(FORWARD, 140, MM, 25, PERCENT)
+        self.autoDrive(REVERSE, 40, MM, timeoutSecs=4)
+        self.autoTurn(RIGHT, 42, DEGREES, 45, PERCENT)
+        self.autoDrive(REVERSE, 390, MM, 50, PERCENT, timeoutSecs=2)
+        self.basket.spin_for(REVERSE, 2.5, TURNS)
+        self.basket.set_timeout( 2, SECONDS)
         self.stopAll()
 
-    def runBasket1(self):
-       if self.setupAutoDriveTrain():
-         self.intake.spin(FORWARD, 100, PERCENT)
-         self.autoDrive(FORWARD, 140, MM, 25, PERCENT)
-         self.autoDrive(REVERSE, 40, MM, timeoutSecs=4)
-         self.autoTurn(RIGHT, 42, DEGREES, 45, PERCENT)
-         self.autoDrive(REVERSE, 390, MM, 50, PERCENT, timeoutSecs=2)
-         self.basket.spin_for(REVERSE, 2.5, TURNS)
-         self.basket.set_timeout( 2, SECONDS)
+    def runGoal2(self):
+        self.intake.spin(FORWARD, 100, PERCENT)
+        self.autoDrive(FORWARD, 300, MM, 25, PERCENT)
+        self.autoTurn(RIGHT, 120, DEGREES, 50, PERCENT)
+        self.autoDrive(REVERSE, 600, MM, 50, PERCENT, timeoutSecs=2)
+        self.basket.set_timeout(2, SECONDS)
+        self.basket.spin_for(REVERSE, 2.5, TURNS)
+        self.basket.set_timeout( 4 ,SECONDS)
+        self.stopAll()
 
-         self.stopAll()
-
-    def runBasket3(self):
-       if self.setupAutoDriveTrain():
-            self.intake.spin(FORWARD, 100, PERCENT)
-            self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
-            self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
-            self.autoTurn(LEFT, 48, DEGREES, 50 , PERCENT)
-
-            self.autoDrive(REVERSE, 350, MM, 35, PERCENT, timeoutSecs=3)
-            self.basket.set_timeout(2, SECONDS)
-            self.basket.spin_for(REVERSE, 2.5, TURNS)
-            #self.driveTrain.set_timeout(60, SECONDS)
-            
-            self.stopAll()
+    def runGoal3(self):
+        self.intake.spin(FORWARD, 100, PERCENT)
+        self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
+        self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
+        self.autoTurn(LEFT, 48, DEGREES, 50 , PERCENT)
+        self.autoDrive(REVERSE, 350, MM, 35, PERCENT, timeoutSecs=3)
+        self.basket.set_timeout(2, SECONDS)
+        self.basket.spin_for(REVERSE, 2.5, TURNS)
+        self.stopAll()
        
 # Where it all begins!    
 bot = Bot()
