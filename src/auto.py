@@ -108,26 +108,32 @@ class Bot:
         self.brain.screen.print(message)
         self.brain.screen.new_line()
 
-    def lowerBasket(self):
-        if not self.basketDownBumper.pressing():
-            # No while loop needed: bumper event handler will get called
-            # TODO: Add a timeout, just in case
-            self.basket.set_timeout(2, SECONDS)
-            self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=True)
-            self.basket.set_timeout(60, SECONDS)
-            self.basket.stop(COAST)
-
     def startIntake(self):
         self.lowerBasket()
         self.intake.spin(FORWARD, 100, PERCENT)
 
-    def raiseBasket(self):
+    def raiseBasket(self, turns: float = 0.0):
         self.intake.stop()
         if not self.basketUpBumper.pressing():           
             self.basket.set_timeout(2, SECONDS)
-            self.basket.spin_for(REVERSE, 9000, DEGREES, 100, PERCENT, wait=True)
+            if turns != 0.0:
+                self.basket.spin_for(REVERSE, turns, TURNS, 100, PERCENT, wait=True)
+            else:
+                self.basket.spin_for(REVERSE, 9000, DEGREES, 100, PERCENT, wait=True)
             self.basket.set_timeout(60, SECONDS)
             self.basket.stop(HOLD)
+
+    def lowerBasket(self, turns: float = 0.0):
+        if not self.basketDownBumper.pressing():
+            # No while loop needed: bumper event handler will get called
+            # TODO: Add a timeout, just in case
+            self.basket.set_timeout(2, SECONDS)
+            if turns != 0.0:
+                self.basket.spin_for(FORWARD, turns, TURNS, 100, PERCENT, wait=True)
+            else:
+                self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=True)
+            self.basket.set_timeout(60, SECONDS)
+            self.basket.stop(COAST)
 
     def onBasketUpBumper(self):
         self.basket.stop(COAST)
@@ -163,13 +169,13 @@ class Bot:
             self.print("Battery level is too low for auton")
             color = Color.RED
         self.healthLed.set_color(color)
-        
 
     def setupAutoDriveTrain(self, calibrate=True):
         # Use DriveTrain in autonomous. Easier to do turns.
         # Last updated on Nov 14, 2023:
-        # Track width: 7-7/8 inches(7.875)
-        # Wheel base : 6-1/2 inches(6.5)
+        # Track width: 7-7/8 inches (7.875)
+        # Wheel base : 6-1/2 inches (6.5)
+
         if not self.driveTrain:
             self.driveTrain = DriveTrain(self.motorLeft,
                                             self.motorRight,
@@ -214,6 +220,7 @@ class Bot:
             if timeoutSecs != 100:  # Restore timeout for future driveTrain users
                 self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
 
+
     def autoTurn(self, direction, angle, units=RotationUnits.DEG,
                  velocity=50, units_v:VelocityPercentUnits=VelocityUnits.PERCENT, wait=True,
                  timeoutSecs=100):
@@ -224,6 +231,9 @@ class Bot:
             if timeoutSecs != 100:  # Restore timeout for future driveTrain users
                 self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
 
+    def autoArc(self, leftVelocityPercent: int, rightVelocityPercent: int, timeoutSecs=100):
+        pass
+        
     # TODO: Add a parameter for green vs. purple blocks?
     def autoBasket(self, up: bool = True):
         self.basket.set_timeout(3000, MSEC)
@@ -240,33 +250,75 @@ class Bot:
         self.print("Axolotls!")
         # Wait for someone to select a program to run
 
+    def finishCheckpoint(self):
+        self.brain.play_sound(SoundType.FILLUP)
+
+    def finishRun(self):        
+        self.brain.play_sound(SoundType.TADA)
+
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
         self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
         self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
 
-    def runGoal1(self):
-        self.intake.spin(FORWARD, 100, PERCENT)
-        self.autoDrive(FORWARD, 140, MM, 25, PERCENT)
-        self.autoDrive(REVERSE, 40, MM, timeoutSecs=4)
-        self.autoTurn(RIGHT, 42, DEGREES, 45, PERCENT)
-        self.autoDrive(REVERSE, 390, MM, 50, PERCENT, timeoutSecs=2)
-        self.basket.spin_for(REVERSE, 2.5, TURNS)
-        self.basket.set_timeout( 2, SECONDS)
-        self.stopAll()
-
     def runGoal2(self):
-        self.intake.spin(FORWARD, 100, PERCENT)
-        self.autoDrive(FORWARD, 300, MM, 25, PERCENT)
-        self.autoTurn(RIGHT, 120, DEGREES, 50, PERCENT)
-        self.autoDrive(REVERSE, 600, MM, 50, PERCENT, timeoutSecs=2)
-        self.basket.set_timeout(2, SECONDS)
-        self.basket.spin_for(REVERSE, 2.5, TURNS)
-        self.basket.set_timeout( 4 ,SECONDS)
-        self.stopAll()
+        # Grab greens from line
+        self.startIntake()
+        self.autoDrive(FORWARD, 360, MM, 40, PERCENT)
+        self.autoDrive(REVERSE, 260, MM, 50, PERCENT)
+        
+        # Corner shot
+        self.autoTurn(RIGHT, 32.5, DEGREES, 45, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 90, MM, 50, PERCENT, timeoutSecs=1)
+
+        # Wiggle-wiggle
+        self.autoTurn(RIGHT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
+        self.autoTurn(LEFT, 40, DEGREES, 100, PERCENT,timeoutSecs=1)
+
+        # Score 4 blocks
+        self.raiseBasket(turns=2.4)
+        wait(1, SECONDS)
+        self.lowerBasket(turns=2.4)
+
+        # Run across the field and hit the red
+        self.startIntake()
+        self.autoDrive(FORWARD, 630, MM, 70, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 560, MM, 100, PERCENT, timeoutSecs=2)
+
+        # Use wall as checkpoint, go back to starting position
+        self.autoTurn(LEFT, 25, DEGREES, 50, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 300, MM, 110, PERCENT, timeoutSecs=1)
+
+        self.finishCheckpoint()
+        self.runGoal1()
+        return
+    
+    def runGoal1(self):
+        self.startIntake()
+
+        # Run across line, spin around to face flower and hit red
+        self.autoDrive(FORWARD, 410, MM, 70, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 95, DEGREES, 50, PERCENT, timeoutSecs=2)
+    
+        # Grab Flower and Wall Slide to goal
+        self.autoDrive(FORWARD, 300, MM, 50, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT,50, DEGREES, 100, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 450, MM, 100, PERCENT, timeoutSecs=2)
+         
+        # Score about 6 blocks
+        self.raiseBasket(turns=2.4)
+        wait(1, SECONDS)
+        self.lowerBasket(turns=2.5)
+
+        self.finishCheckpoint()
+        return
 
     def runGoal3(self):
+        self.motorLeft.spin(FORWARD, 100, PERCENT)
+        self.motorRight.spin(FORWARD, 30, PERCENT)
+        self.finishCheckpoint()
+        return
         self.intake.spin(FORWARD, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
         self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
