@@ -72,7 +72,7 @@ class Bot:
             elif self.modeNumber == 3:
                 self.runGoal3()
             elif self.modeNumber == 4:
-                self.runCurveOut()
+                self.runCurveHome()
             self.isAutoRunning = False
             self.print("Done")
 
@@ -211,6 +211,7 @@ class Bot:
         else:
             self.stopAll()
             self.print("FAILED Calibration")
+            self.brain.play_sound(SoundType.POWER_DOWN)
             return False
 
     def autoDrive(self, direction, distance, units=DistanceUnits.IN,
@@ -288,17 +289,25 @@ class Bot:
     def finishRun(self):        
         self.brain.play_sound(SoundType.TADA)
 
+    def autoDump(self):
+        self.raiseBasket(turns=2.4)
+        wait(1, SECONDS)
+        self.lowerBasket(turns=2.5, wait=False) # Faster if we don't wait
+
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
         self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
         self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
 
-    def runGoal2(self):
-        # Grab greens from line
+    def runGreenStrip(self):
         self.startIntake()
         self.autoDrive(FORWARD, 360, MM, 40, PERCENT)
         self.autoDrive(REVERSE, 260, MM, 50, PERCENT)
+        
+    def runGoal2(self):
+        # Grab greens from line
+        self.runGreenStrip()
         
         # Corner shot
         self.autoTurn(RIGHT, 32.5, DEGREES, 45, PERCENT, timeoutSecs=2)
@@ -306,12 +315,10 @@ class Bot:
 
         # Wiggle-wiggle
         self.autoTurn(RIGHT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
-        self.autoTurn(LEFT, 40, DEGREES, 100, PERCENT,timeoutSecs=1)
+        self.autoTurn(LEFT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
 
         # Score 4 blocks
-        self.raiseBasket(turns=2.4)
-        wait(1, SECONDS)
-        self.lowerBasket(turns=2.4)
+        self.autoDump()
 
         # Run across the field and hit the red
         self.startIntake()
@@ -340,39 +347,78 @@ class Bot:
         wait(1, SECONDS) # Let the intake run to bring in blocks
          
         # Score about 6 blocks?
-        self.raiseBasket(turns=2.4)
-        wait(1, SECONDS)
-        self.lowerBasket(turns=2.5, wait=False) # Faster if we don't wait
+        self.autoDump()
 
         # Next checkpoint
         self.finishCheckpoint()
-        self.runCurveOut()
+
+        # Risky: Run across the field, or less risky: go home
+        if True:
+            self.runCurveHome()
+        else:
+            self.runCurveOut()
         return
     
     def runCurveOut(self):
         self.startIntake()
-        self.autoArc(85, 15, 80, 4)
+        self.autoDrive(FORWARD, 105, MM, 50, PERCENT, timeoutSecs=1 )
+        self.autoArc(105, 15, 80, 4)
         self.autoDrive(FORWARD, 620, MM, 80)
         self.autoTurn(RIGHT, 100, DEGREES)
         self.autoDrive(FORWARD, 400, MM)
+
+        # TODO: Cross the whole field and go for the 2nd line of greens
         self.finishCheckpoint()
-
         return
-
+    
+    def runCurveHome(self):
+        self.autoArc(160, 20, 100, 4)
+        self.autoDrive(FORWARD, 200, MM, 100, timeoutSecs=2)  # go forward a bit
+        self.autoArc(140, 20, 100, 3)
+        self.autoDrive(FORWARD, 500, MM, 100, timeoutSecs=2)  # Wall slide
+        self.stopAll()
+        self.finishCheckpoint()
+        self.finishRun()
+        return
+    
     def runGoal3(self):
-        self.motorLeft.spin(FORWARD, 100, PERCENT)
-        self.motorRight.spin(FORWARD, 30, PERCENT)
-        self.finishCheckpoint()
-        return
         self.intake.spin(FORWARD, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
         self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
-        self.autoTurn(LEFT, 48, DEGREES, 50 , PERCENT)
-        self.autoDrive(REVERSE, 350, MM, 35, PERCENT, timeoutSecs=3)
+        self.autoTurn(LEFT, 52, DEGREES, 100 , PERCENT)
+        self.autoDrive(REVERSE, 350, MM, 100, PERCENT, timeoutSecs=3)
         self.basket.set_timeout(2, SECONDS)
         self.basket.spin_for(REVERSE, 2.5, TURNS)
         self.stopAll()
        
+
+    def runGoal3New(self):
+        self.autoBasket(up=False)
+        self.runGreenStrip()
+        self.autoDrive(FORWARD, 180, MM, 50, timeoutSecs=2)
+
+        # Curve to avoid backing into the purple flower
+        self.autoArc(300, -80, 15, timeoutSecs=3)
+
+        # Hit the right wall at an angle
+        self.autoDrive(REVERSE, 250, MM, 100, timeoutSecs=2)
+        self.autoTurn(RIGHT, 20, DEGREES, 50, PERCENT, timeoutSecs=1)
+
+        # Turn to pick up some green from the flower
+        self.autoArc(330, 80, 15, timeoutSecs=3)
+        self.autoDrive(FORWARD, 200, MM, velocity=50, timeoutSecs=1)
+
+        # Wait a bit to digest
+        wait(1, SECONDS)
+
+        # Drive fast toward the wall and goal
+        self.autoArc(300, -80, -10, timeoutSecs=2)
+        self.autoDump()
+
+        self.stopAll()
+        self.finishCheckpoint()
+    
+        
 # Where it all begins!    
 bot = Bot()
 bot.run()
