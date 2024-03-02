@@ -4,9 +4,9 @@ from vex import *
 
 
 class Bot:
-    MODES = ["AUTO_RED", "GOAL_2", "GOAL_1", "GOAL_3"]
-    MODE_COLORS = [Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE]
-    MODE_PEN_COLORS = [Color.WHITE, Color.BLACK, Color.BLACK, Color.WHITE]
+    MODES = ["AUTO_RED", "GOAL_2", "GOAL_1", "GOAL_3", "CURVE"]
+    MODE_COLORS = [Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE, Color.YELLOW]
+    MODE_PEN_COLORS = [Color.WHITE, Color.BLACK, Color.BLACK, Color.WHITE, Color.BLACK]
 
     def __init__(self):
         self.isAutoRunning = False
@@ -71,6 +71,8 @@ class Bot:
                 self.runGoal1()
             elif self.modeNumber == 3:
                 self.runGoal3()
+            elif self.modeNumber == 4:
+                self.runCurveOut()
             self.isAutoRunning = False
             self.print("Done")
 
@@ -82,7 +84,7 @@ class Bot:
 
     def applyMode(self, newMode):
         if self.inertial.is_calibrating():
-            self.cancelCalibration = True
+            self.cancelCalibration = False
         if self.isAutoRunning:
             self.print("Running auto already")
         else:
@@ -123,17 +125,18 @@ class Bot:
             self.basket.set_timeout(60, SECONDS)
             self.basket.stop(HOLD)
 
-    def lowerBasket(self, turns: float = 0.0):
+    def lowerBasket(self, turns: float = 0.0, wait: bool = True):
         if not self.basketDownBumper.pressing():
             # No while loop needed: bumper event handler will get called
             # TODO: Add a timeout, just in case
             self.basket.set_timeout(2, SECONDS)
             if turns != 0.0:
-                self.basket.spin_for(FORWARD, turns, TURNS, 100, PERCENT, wait=True)
+                self.basket.spin_for(FORWARD, turns, TURNS, 100, PERCENT, wait)
             else:
-                self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=True)
-            self.basket.set_timeout(60, SECONDS)
-            self.basket.stop(COAST)
+                self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=wait)
+            if wait:
+                self.basket.set_timeout(60, SECONDS)
+                self.basket.stop(COAST)
 
     def onBasketUpBumper(self):
         self.basket.stop(COAST)
@@ -231,8 +234,37 @@ class Bot:
             if timeoutSecs != 100:  # Restore timeout for future driveTrain users
                 self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
 
-    def autoArc(self, leftVelocityPercent: int, rightVelocityPercent: int, timeoutSecs=100):
-        pass
+    def autoArc(self, headingTarget: float, leftVelocityPercent: int, rightVelocityPercent: int, timeoutSecs=100):
+        if timeoutSecs != 100:
+            self.motorLeft.set_timeout(timeoutSecs)
+            self.motorRight.set_timeout(timeoutSecs)
+        self.motorLeft.spin(FORWARD, leftVelocityPercent, PERCENT)
+        self.motorRight.spin(FORWARD, rightVelocityPercent, PERCENT)
+        
+        # TODO: Bail out based on timeout
+        lastHeading = 0
+        sameHeadings = 0
+        while True:  # Wait to complete to arc
+            heading = self.inertial.heading()
+            print(heading)
+            error = 5
+            if (heading > (headingTarget - error) and heading < (headingTarget + error)):
+                break
+            if heading == lastHeading:
+                sameHeadings += 1
+            else:
+                sameHeadings = 0
+            if sameHeadings > 5:  # Stuck
+                break
+            lastHeading = heading
+            sleep(100, MSEC)
+
+        self.motorLeft.stop(BRAKE)
+        self.motorRight.stop(BRAKE)
+
+        if timeoutSecs != 100:  # Restore old value?
+            self.motorLeft.set_timeout(100)
+            self.motorRight.set_timeout(100)
         
     # TODO: Add a parameter for green vs. purple blocks?
     def autoBasket(self, up: bool = True):
@@ -305,13 +337,26 @@ class Bot:
         self.autoDrive(FORWARD, 300, MM, 50, PERCENT, timeoutSecs=2)
         self.autoTurn(LEFT,50, DEGREES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 450, MM, 100, PERCENT, timeoutSecs=2)
+        wait(1, SECONDS) # Let the intake run to bring in blocks
          
-        # Score about 6 blocks
+        # Score about 6 blocks?
         self.raiseBasket(turns=2.4)
         wait(1, SECONDS)
-        self.lowerBasket(turns=2.5)
+        self.lowerBasket(turns=2.5, wait=False) # Faster if we don't wait
 
+        # Next checkpoint
         self.finishCheckpoint()
+        self.runCurveOut()
+        return
+    
+    def runCurveOut(self):
+        self.startIntake()
+        self.autoArc(85, 15, 80, 4)
+        self.autoDrive(FORWARD, 620, MM, 80)
+        self.autoTurn(RIGHT, 100, DEGREES)
+        self.autoDrive(FORWARD, 400, MM)
+        self.finishCheckpoint()
+
         return
 
     def runGoal3(self):
