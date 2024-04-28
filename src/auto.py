@@ -112,16 +112,16 @@ class Bot:
 
     def startIntake(self):
         self.lowerBasket()
-        self.intake.spin(FORWARD, 100, PERCENT)
+        self.intake.spin(REVERSE, 100, PERCENT)
 
     def raiseBasket(self, turns: float = 0.0):
         self.intake.stop()
         if not self.basketUpBumper.pressing():           
             self.basket.set_timeout(2, SECONDS)
             if turns != 0.0:
-                self.basket.spin_for(REVERSE, turns, TURNS, 100, PERCENT, wait=True)
+                self.basket.spin_for(FORWARD, turns, TURNS, 100, PERCENT, wait=True)
             else:
-                self.basket.spin_for(REVERSE, 9000, DEGREES, 100, PERCENT, wait=True)
+                self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=True)
             self.basket.set_timeout(60, SECONDS)
             self.basket.stop(HOLD)
 
@@ -131,9 +131,9 @@ class Bot:
             # TODO: Add a timeout, just in case
             self.basket.set_timeout(2, SECONDS)
             if turns != 0.0:
-                self.basket.spin_for(FORWARD, turns, TURNS, 100, PERCENT, wait)
+                self.basket.spin_for(REVERSE, turns, TURNS, 100, PERCENT, wait)
             else:
-                self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=wait)
+                self.basket.spin_for(REVERSE, 9000, DEGREES, 100, PERCENT, wait=wait)
             if wait:
                 self.basket.set_timeout(60, SECONDS)
                 self.basket.stop(COAST)
@@ -290,9 +290,10 @@ class Bot:
         self.brain.play_sound(SoundType.TADA)
 
     def autoDump(self):
-        self.raiseBasket(turns=2.4)
+        #wait(1, SECONDS)
+        self.raiseBasket(turns=5)
         wait(1, SECONDS)
-        self.lowerBasket(turns=2.5, wait=False) # Faster if we don't wait
+        self.lowerBasket(turns=6, wait=False) # Faster if we don't wait
 
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
@@ -310,23 +311,23 @@ class Bot:
         self.runGreenStrip()
         
         # Corner shot
-        self.autoTurn(RIGHT, 32.5, DEGREES, 45, PERCENT, timeoutSecs=2)
-        self.autoDrive(REVERSE, 90, MM, 50, PERCENT, timeoutSecs=1)
+        self.autoTurn(RIGHT, 30, DEGREES, 45, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 140, MM, 50, PERCENT, timeoutSecs=1)
 
         # Wiggle-wiggle
-        self.autoTurn(RIGHT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
-        self.autoTurn(LEFT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
+        #self.autoTurn(RIGHT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
+        #self.autoTurn(LEFT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
 
         # Score 4 blocks
         self.autoDump()
 
-        # Run across the field and hit the red
+        # Goes back in position
         self.startIntake()
-        self.autoDrive(FORWARD, 630, MM, 70, PERCENT, timeoutSecs=2)
-        self.autoDrive(REVERSE, 560, MM, 100, PERCENT, timeoutSecs=2)
+        self.autoDrive(FORWARD, 80, MM, 70, PERCENT, timeoutSecs=2)
+       # self.autoDrive(REVERSE, 560, MM, 100, PERCENT, timeoutSecs=2)
 
         # Use wall as checkpoint, go back to starting position
-        self.autoTurn(LEFT, 25, DEGREES, 50, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 35, DEGREES, 50, PERCENT, timeoutSecs=1)
         self.autoDrive(REVERSE, 300, MM, 110, PERCENT, timeoutSecs=1)
 
         self.finishCheckpoint()
@@ -337,8 +338,8 @@ class Bot:
         self.startIntake()
 
         # Run across line, spin around to face flower and hit red
-        self.autoDrive(FORWARD, 410, MM, 70, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 95, DEGREES, 50, PERCENT, timeoutSecs=2)
+        self.autoDrive(FORWARD, 360, MM, 70, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 85, DEGREES, 50, PERCENT, timeoutSecs=2)
     
         # Grab Flower and Wall Slide to goal
         self.autoDrive(FORWARD, 300, MM, 50, PERCENT, timeoutSecs=2)
@@ -348,7 +349,7 @@ class Bot:
          
         # Score about 6 blocks?
         self.autoDump()
-
+        
         # Next checkpoint
         self.finishCheckpoint()
 
