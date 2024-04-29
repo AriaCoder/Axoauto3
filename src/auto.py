@@ -297,7 +297,7 @@ class Bot:
 
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
-        self.intake.spin(REVERSE, 100, PERCENT)
+        self.intake.spin(FORWARD, 100, PERCENT)
         self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
         self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
 
@@ -383,13 +383,12 @@ class Bot:
         return
     
     def runGoal3(self):
-        self.intake.spin(FORWARD, 100, PERCENT)
+        self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
         self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
         self.autoTurn(LEFT, 52, DEGREES, 100 , PERCENT)
         self.autoDrive(REVERSE, 350, MM, 100, PERCENT, timeoutSecs=3)
-        self.basket.set_timeout(2, SECONDS)
-        self.basket.spin_for(REVERSE, 2.5, TURNS)
+        self.autoDump()
         self.stopAll()
        
 
