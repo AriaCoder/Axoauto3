@@ -114,32 +114,29 @@ class Bot:
         self.lowerBasket()
         self.intake.spin(REVERSE, 100, PERCENT)
 
-    def raiseBasket(self, turns: float = 0.0):
+    def raiseBasket(self):
         self.intake.stop()
         if not self.basketUpBumper.pressing():           
-            self.basket.set_timeout(2, SECONDS)
-            if turns != 0.0:
-                self.basket.spin_for(FORWARD, turns, TURNS, 100, PERCENT, wait=True)
-            else:
-                self.basket.spin_for(FORWARD, 9000, DEGREES, 100, PERCENT, wait=True)
-            self.basket.set_timeout(60, SECONDS)
             self.basket.stop(HOLD)
+            self.brain.timer.reset()
+            while not self.basketUpBumper.pressing() and self.brain.timer.time(SECONDS) < 2:
+                self.basket.spin(FORWARD, 100, PERCENT)
+                wait(20, MSEC)
 
-    def lowerBasket(self, turns: float = 0.0, wait: bool = True):
+    def lowerBasket(self):
         if not self.basketDownBumper.pressing():
+            self.basket.stop(COAST)
             # No while loop needed: bumper event handler will get called
             # TODO: Add a timeout, just in case
-            self.basket.set_timeout(2, SECONDS)
-            if turns != 0.0:
-                self.basket.spin_for(REVERSE, turns, TURNS, 100, PERCENT, wait)
-            else:
-                self.basket.spin_for(REVERSE, 9000, DEGREES, 100, PERCENT, wait=wait)
-            if wait:
-                self.basket.set_timeout(60, SECONDS)
-                self.basket.stop(COAST)
+    
+            self.brain.timer.reset()
+            while not self.basketDownBumper.pressing() and self.brain.timer.time(SECONDS) < 2:
+                self.basket.spin(REVERSE, 100, PERCENT)
+                wait(20, MSEC)
+            
 
     def onBasketUpBumper(self):
-        self.basket.stop(COAST)
+        self.basket.stop(HOLD)
 
     def onBasketDownBumper(self):
         self.basket.stop(COAST)
@@ -200,7 +197,7 @@ class Bot:
                 and not self.cancelCalibration):
             wait(50, MSEC)
             countdown = countdown - 1
-        if self.cancelCalibration:
+        if self.cancelCalibration:   
             self.print("Cancelled Calibration!")
             return False
         elif countdown > 0 and not self.inertial.is_calibrating():
@@ -290,10 +287,9 @@ class Bot:
         self.brain.play_sound(SoundType.TADA)
 
     def autoDump(self):
-        #wait(1, SECONDS)
-        self.raiseBasket(turns=5)
-        wait(1, SECONDS)
-        self.lowerBasket(turns=6, wait=False) # Faster if we don't wait
+        self.raiseBasket()
+        wait(1, SECONDS)  # Let blocks drop
+        self.lowerBasket() # Faster if we don't wait
 
     def runAutoRed(self):
         self.setupAutoDriveTrain(calibrate=False)
@@ -301,9 +297,10 @@ class Bot:
         self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
         self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
 
+
     def runGreenStrip(self):
         self.startIntake()
-        self.autoDrive(FORWARD, 360, MM, 40, PERCENT)
+        self.autoDrive(FORWARD, 360, MM, 55, PERCENT)
         self.autoDrive(REVERSE, 260, MM, 50, PERCENT)
         
     def runGoal2(self):
@@ -335,15 +332,16 @@ class Bot:
         return
     
     def runGoal1(self):
+        # Checkpoint: Start back at the wall
         self.startIntake()
 
         # Run across line, spin around to face flower and hit red
         self.autoDrive(FORWARD, 360, MM, 70, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 85, DEGREES, 50, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 75, DEGREES, 50, PERCENT, timeoutSecs=2)
     
         # Grab Flower and Wall Slide to goal
         self.autoDrive(FORWARD, 300, MM, 50, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT,50, DEGREES, 100, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT,60, DEGREES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 450, MM, 100, PERCENT, timeoutSecs=2)
         wait(1, SECONDS) # Let the intake run to bring in blocks
          
@@ -353,11 +351,14 @@ class Bot:
         # Next checkpoint
         self.finishCheckpoint()
 
+        # Drive to the wall for the Driver to catch up
+        self.autoArc(120, 50, 100, timeoutSecs=2)
+
         # Risky: Run across the field, or less risky: go home
-        if True:
-            self.runCurveHome()
-        else:
-            self.runCurveOut()
+       # if True:
+      #      self.runCurveHome()
+    #    else:
+     #      self.runCurveOut()
         return
     
     def runCurveOut(self):
@@ -392,32 +393,7 @@ class Bot:
         self.stopAll()
        
 
-    def runGoal3New(self):
-        self.autoBasket(up=False)
-        self.runGreenStrip()
-        self.autoDrive(FORWARD, 180, MM, 50, timeoutSecs=2)
 
-        # Curve to avoid backing into the purple flower
-        self.autoArc(300, -80, 15, timeoutSecs=3)
-
-        # Hit the right wall at an angle
-        self.autoDrive(REVERSE, 250, MM, 100, timeoutSecs=2)
-        self.autoTurn(RIGHT, 20, DEGREES, 50, PERCENT, timeoutSecs=1)
-
-        # Turn to pick up some green from the flower
-        self.autoArc(330, 80, 15, timeoutSecs=3)
-        self.autoDrive(FORWARD, 200, MM, velocity=50, timeoutSecs=1)
-
-        # Wait a bit to digest
-        wait(1, SECONDS)
-
-        # Drive fast toward the wall and goal
-        self.autoArc(300, -80, -10, timeoutSecs=2)
-        self.autoDump()
-
-        self.stopAll()
-        self.finishCheckpoint()
-    
         
 # Where it all begins!    
 bot = Bot()
