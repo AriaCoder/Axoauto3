@@ -308,7 +308,7 @@ class Bot:
         self.runGreenStrip()
         
         # Corner shot
-        self.autoTurn(RIGHT, 30, DEGREES, 45, PERCENT, timeoutSecs=2)
+        self.autoTurn(RIGHT, 23, DEGREES, 45, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 140, MM, 50, PERCENT, timeoutSecs=1)
 
         # Wiggle-wiggle
@@ -324,7 +324,7 @@ class Bot:
        # self.autoDrive(REVERSE, 560, MM, 100, PERCENT, timeoutSecs=2)
 
         # Use wall as checkpoint, go back to starting position
-        self.autoTurn(LEFT, 35, DEGREES, 50, PERCENT, timeoutSecs=1)
+        self.autoTurn(LEFT, 32, DEGREES, 50, PERCENT, timeoutSecs=1)
         self.autoDrive(REVERSE, 300, MM, 110, PERCENT, timeoutSecs=1)
 
         self.finishCheckpoint()
@@ -337,11 +337,11 @@ class Bot:
 
         # Run across line, spin around to face flower and hit red
         self.autoDrive(FORWARD, 360, MM, 70, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 75, DEGREES, 50, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 95, DEGREES, 50, PERCENT, timeoutSecs=2)
     
         # Grab Flower and Wall Slide to goal
         self.autoDrive(FORWARD, 300, MM, 50, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT,60, DEGREES, 100, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT,65, DEGREES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 450, MM, 100, PERCENT, timeoutSecs=2)
         wait(1, SECONDS) # Let the intake run to bring in blocks
          
