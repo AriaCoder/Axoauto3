@@ -151,7 +151,7 @@ class Bot:
 
     def stopAll(self):
         if self.driveTrain:
-            self.driveTrain.stop(COAST)
+            self.driveTrain.stop(HOLD)
         self.intake.stop(COAST)
         self.basket.stop(COAST)
 
@@ -300,15 +300,16 @@ class Bot:
 
     def runGreenStrip(self):
         self.startIntake()
-        self.autoDrive(FORWARD, 360, MM, 55, PERCENT)
-        self.autoDrive(REVERSE, 260, MM, 50, PERCENT)
+        self.autoDrive(FORWARD, 360, MM, 45, PERCENT)
+        self.autoTurn(LEFT, 2, DEGREES, 100, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 260, MM, 35, PERCENT)
         
     def runGoal2(self):
         # Grab greens from line
         self.runGreenStrip()
         
         # Corner shot
-        self.autoTurn(RIGHT, 23, DEGREES, 45, PERCENT, timeoutSecs=2)
+        self.autoTurn(RIGHT, 30, DEGREES, 45, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 140, MM, 50, PERCENT, timeoutSecs=1)
 
         # Wiggle-wiggle
@@ -324,8 +325,8 @@ class Bot:
        # self.autoDrive(REVERSE, 560, MM, 100, PERCENT, timeoutSecs=2)
 
         # Use wall as checkpoint, go back to starting position
-        self.autoTurn(LEFT, 32, DEGREES, 50, PERCENT, timeoutSecs=1)
-        self.autoDrive(REVERSE, 300, MM, 110, PERCENT, timeoutSecs=1)
+        self.autoTurn(LEFT, 33, DEGREES, 50, PERCENT, timeoutSecs=1)
+        self.autoDrive(REVERSE, 300, MM, 70, PERCENT, timeoutSecs=1)
 
         self.finishCheckpoint()
         self.runGoal1()
@@ -336,13 +337,13 @@ class Bot:
         self.startIntake()
 
         # Run across line, spin around to face flower and hit red
-        self.autoDrive(FORWARD, 360, MM, 70, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 95, DEGREES, 50, PERCENT, timeoutSecs=2)
+        self.autoDrive(FORWARD, 460, MM, 70, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 93, DEGREES, 50, PERCENT, timeoutSecs=2)
     
         # Grab Flower and Wall Slide to goal
-        self.autoDrive(FORWARD, 300, MM, 50, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT,65, DEGREES, 100, PERCENT, timeoutSecs=2)
-        self.autoDrive(REVERSE, 450, MM, 100, PERCENT, timeoutSecs=2)
+        self.autoDrive(FORWARD, 320, MM, 50, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT,50, DEGREES, 100, PERCENT, timeoutSecs=2)
+        self.autoDrive(REVERSE, 500, MM, 70, PERCENT, timeoutSecs=2)
         wait(1, SECONDS) # Let the intake run to bring in blocks
          
         # Score about 6 blocks?
