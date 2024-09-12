@@ -4,9 +4,9 @@ from vex import *
 
 
 class Bot:
-    MODES = ["AUTO_RED", "GOAL_2", "GOAL_1", "GOAL_3", "CURVE"]
-    MODE_COLORS = [Color.RED, Color.YELLOW_GREEN, Color.WHITE, Color.PURPLE, Color.YELLOW]
-    MODE_PEN_COLORS = [Color.WHITE, Color.BLACK, Color.BLACK, Color.WHITE, Color.BLACK]
+    MODES = ["MANUAL", "RIGHT_GOAL", "LEFT_GOAL"]
+    MODE_COLORS = [Color.BLACK, Color.YELLOW_GREEN, Color.BLUE]
+    MODE_PEN_COLORS = [Color.WHITE, Color.BLACK, Color.WHITE]
 
     def __init__(self):
         self.isAutoRunning = False
@@ -26,27 +26,21 @@ class Bot:
         self.setupSelector()
 
     def setupPortMappings(self):
-        self.motorLeft = Motor(Ports.PORT1,1,True)
-        self.motorRight = Motor(Ports.PORT6,1, False)
-        self.intakeLeft = Motor(Ports.PORT3,1,True)
-        self.intakeRight = Motor(Ports.PORT7)
-        self.basketLeft = Motor(Ports.PORT8)
-        self.basketRight = Motor(Ports.PORT2)
+        self.motorLeft = Motor(Ports.PORT3,1,True)
+        self.motorRight = Motor(Ports.PORT11,1, False)
+        self.intakeMotor = Motor(Ports.PORT1,1,True)
+        self.catapultLeft = Motor(Ports.PORT4)
+        self.catapultRight = Motor(Ports.PORT1)
         self.healthLed = Touchled(Ports.PORT9)
-        self.basketDownBumper = Bumper(Ports.PORT4)
-        self.basketUpBumper = Bumper(Ports.PORT5)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
 
     def setupIntake(self):
-        self.intake = MotorGroup(self.intakeLeft, self.intakeRight)
+        self.intake = MotorGroup(self.intakeMotor)
         self.intake.set_velocity(100, PERCENT)
 
     def setupBasket(self):
-        self.basketLeft.set_reversed(True)
-        self.basket = MotorGroup(self.basketLeft, self.basketRight)
+        self.basket = MotorGroup(self.catapultLeft, self.catapultRight)
         self.basket.set_velocity(100, PERCENT)
-        self.basketUpBumper.pressed(self.onBasketUpBumper)
-        self.basketDownBumper.pressed(self.onBasketDownBumper)
 
     def setupSelector(self):
         self.brain.buttonRight.pressed(self.onBrainButtonRight)
