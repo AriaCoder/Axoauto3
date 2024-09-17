@@ -4,9 +4,9 @@ from vex import *
 
 
 class Bot:
-    MODES = ["MANUAL", "RIGHT_GOAL", "LEFT_GOAL"]
-    MODE_COLORS = [Color.BLACK, Color.YELLOW_GREEN, Color.BLUE]
-    MODE_PEN_COLORS = [Color.WHITE, Color.BLACK, Color.WHITE]
+    MODES = ["NEAR_GOAL", "FAR_GOAL", "REPEAT"]
+    MODE_COLORS = [Color.YELLOW_GREEN, Color.BLUE, Color.VIOLET]
+    MODE_PEN_COLORS = [Color.BLACK, Color.WHITE, Color. WHITE]
 
     def __init__(self):
         self.isAutoRunning = False
@@ -22,25 +22,26 @@ class Bot:
         self.setupPortMappings()
         self.setupDrive()
         self.setupIntake()
-        self.setupBasket()
+        self.setupCatapult()
         self.setupSelector()
 
     def setupPortMappings(self):
-        self.motorLeft = Motor(Ports.PORT3,1,True)
-        self.motorRight = Motor(Ports.PORT11,1, False)
+        self.motorLeft = Motor(Ports.PORT7,1,True)
+        self.motorRight = Motor(Ports.PORT12,1, False)
         self.intakeMotor = Motor(Ports.PORT1,1,True)
-        self.catapultLeft = Motor(Ports.PORT4)
-        self.catapultRight = Motor(Ports.PORT1)
-        self.healthLed = Touchled(Ports.PORT9)
+        self.catapultLeft = Motor(Ports.PORT3)
+        self.catapultRight = Motor(Ports.PORT11)
+        self.hDriveMotor = Motor(Ports.PORT9)
+        self.startAuto = Touchled(Ports.PORT10)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
 
     def setupIntake(self):
         self.intake = MotorGroup(self.intakeMotor)
         self.intake.set_velocity(100, PERCENT)
 
-    def setupBasket(self):
-        self.basket = MotorGroup(self.catapultLeft, self.catapultRight)
-        self.basket.set_velocity(100, PERCENT)
+    def setupCatapult(self):
+        self.catapult = MotorGroup(self.catapultLeft, self.catapultRight)
+        self.catapult.set_velocity(100, PERCENT)
 
     def setupSelector(self):
         self.brain.buttonRight.pressed(self.onBrainButtonRight)
@@ -58,15 +59,11 @@ class Bot:
         else:
             self.isAutoRunning = True
             if self.modeNumber == 0:
-                self.runAutoRed()
+                self.runNearGoal()
             elif self.modeNumber == 1:
-                self.runGoal2()
+                self.runFarGoal()
             elif self.modeNumber == 2:
-                self.runGoal1()
-            elif self.modeNumber == 3:
-                self.runGoal3()
-            elif self.modeNumber == 4:
-                self.runCurveHome()
+                self.runRepeat()
             self.isAutoRunning = False
             self.print("Done")
 
@@ -105,35 +102,7 @@ class Bot:
         self.brain.screen.new_line()
 
     def startIntake(self):
-        self.lowerBasket()
         self.intake.spin(REVERSE, 100, PERCENT)
-
-    def raiseBasket(self):
-        self.intake.stop()
-        if not self.basketUpBumper.pressing():           
-            self.basket.stop(HOLD)
-            self.brain.timer.reset()
-            while not self.basketUpBumper.pressing() and self.brain.timer.time(SECONDS) < 2:
-                self.basket.spin(FORWARD, 100, PERCENT)
-                wait(20, MSEC)
-
-    def lowerBasket(self):
-        if not self.basketDownBumper.pressing():
-            self.basket.stop(COAST)
-            # No while loop needed: bumper event handler will get called
-            # TODO: Add a timeout, just in case
-    
-            self.brain.timer.reset()
-            while not self.basketDownBumper.pressing() and self.brain.timer.time(SECONDS) < 2:
-                self.basket.spin(REVERSE, 100, PERCENT)
-                wait(20, MSEC)
-            
-
-    def onBasketUpBumper(self):
-        self.basket.stop(HOLD)
-
-    def onBasketDownBumper(self):
-        self.basket.stop(COAST)
 
     def setupDrive(self):
         self.motorLeft.set_velocity(0, PERCENT)
@@ -147,22 +116,22 @@ class Bot:
         if self.driveTrain:
             self.driveTrain.stop(HOLD)
         self.intake.stop(COAST)
-        self.basket.stop(COAST)
+        self.catapult.stop(COAST)
 
-    def checkHealth(self):
-        # Copied from our code for Slapshot 2022-23 season
-        color = Color.RED
-        capacity = self.brain.battery.capacity()
-        if capacity > 95:
-            color = Color.BLUE
-        elif capacity > 85:
-            color = Color.GREEN
-        elif capacity > 81:
-            color = Color.ORANGE
-        else:
-            self.print("Battery level is too low for auton")
-            color = Color.RED
-        self.healthLed.set_color(color)
+   # def checkHealth(self):
+        #Copied from our code for Slapshot 2022-23 season
+      #      color = Color.RED
+   # capacity = self.brain.battery.capacity()
+    #if capacity > 95:
+     #       color = Color.BLUE
+    #elif capacity > 85:
+    #        color = Color.GREEN
+   # elif capacity > 81:
+    #        color = Color.ORANGE
+    #else:
+    #        self.print("Battery level is too low for auton")
+     #       color = Color.RED
+      #  self.healthLed.set_color(color
 
     def setupAutoDriveTrain(self, calibrate=True):
         # Use DriveTrain in autonomous. Easier to do turns.
@@ -259,14 +228,7 @@ class Bot:
             self.motorRight.set_timeout(100)
         
     # TODO: Add a parameter for green vs. purple blocks?
-    def autoBasket(self, up: bool = True):
-        self.basket.set_timeout(3000, MSEC)
-        # Let the up/down basket bumpers take care of stopping the basket
-        if up:
-            self.basket.spin_for(REVERSE, 9000, RotationUnits.DEG, 100, PERCENT)
-        else:
-            self.basket.spin_for(FORWARD, 9000, RotationUnits.DEG, 100, PERCENT)
-
+   
     def run(self):
         self.setup()
         self.fillScreen(Color.BLUE_VIOLET, Color.WHITE)
@@ -280,111 +242,25 @@ class Bot:
     def finishRun(self):        
         self.brain.play_sound(SoundType.TADA)
 
-    def autoDump(self):
-        self.raiseBasket()
-        wait(1, SECONDS)  # Let blocks drop
-        self.lowerBasket() # Faster if we don't wait
-
-    def runAutoRed(self):
+    def runNearGoal(self):
         self.setupAutoDriveTrain(calibrate=False)
         self.intake.spin(FORWARD, 100, PERCENT)
         self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
         self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
 
 
-    def runGreenStrip(self):
+    def runFarGoal(self):
         self.startIntake()
         self.autoDrive(FORWARD, 360, MM, 45, PERCENT)
         self.autoTurn(LEFT, 2, DEGREES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 260, MM, 35, PERCENT)
-        
-    def runGoal2(self):
-        # Grab greens from line
-        self.runGreenStrip()
-        
-        # Corner shot
-        self.autoTurn(RIGHT, 30, DEGREES, 45, PERCENT, timeoutSecs=2)
-        self.autoDrive(REVERSE, 140, MM, 50, PERCENT, timeoutSecs=1)
-
-        # Wiggle-wiggle
-        #self.autoTurn(RIGHT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
-        #self.autoTurn(LEFT, 20, DEGREES, 100, PERCENT,timeoutSecs=1)
-
-        # Score 4 blocks
-        self.autoDump()
-
-        # Goes back in position
-        self.startIntake()
-        self.autoDrive(FORWARD, 80, MM, 70, PERCENT, timeoutSecs=2)
-       # self.autoDrive(REVERSE, 560, MM, 100, PERCENT, timeoutSecs=2)
-
-        # Use wall as checkpoint, go back to starting position
-        self.autoTurn(LEFT, 33, DEGREES, 50, PERCENT, timeoutSecs=1)
-        self.autoDrive(REVERSE, 300, MM, 70, PERCENT, timeoutSecs=1)
-
-        self.finishCheckpoint()
-        self.runGoal1()
-        return
     
-    def runGoal1(self):
-        # Checkpoint: Start back at the wall
-        self.startIntake()
-
-        # Run across line, spin around to face flower and hit red
-        self.autoDrive(FORWARD, 460, MM, 70, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 93, DEGREES, 50, PERCENT, timeoutSecs=2)
-    
-        # Grab Flower and Wall Slide to goal
-        self.autoDrive(FORWARD, 320, MM, 50, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT,50, DEGREES, 100, PERCENT, timeoutSecs=2)
-        self.autoDrive(REVERSE, 500, MM, 70, PERCENT, timeoutSecs=2)
-        wait(1, SECONDS) # Let the intake run to bring in blocks
-         
-        # Score about 6 blocks?
-        self.autoDump()
-        
-        # Next checkpoint
-        self.finishCheckpoint()
-
-        # Drive to the wall for the Driver to catch up
-        self.autoArc(120, 50, 100, timeoutSecs=2)
-
-        # Risky: Run across the field, or less risky: go home
-       # if True:
-      #      self.runCurveHome()
-    #    else:
-     #      self.runCurveOut()
-        return
-    
-    def runCurveOut(self):
-        self.startIntake()
-        self.autoDrive(FORWARD, 105, MM, 50, PERCENT, timeoutSecs=1 )
-        self.autoArc(105, 15, 80, 4)
-        self.autoDrive(FORWARD, 620, MM, 80)
-        self.autoTurn(RIGHT, 100, DEGREES)
-        self.autoDrive(FORWARD, 400, MM)
-
-        # TODO: Cross the whole field and go for the 2nd line of greens
-        self.finishCheckpoint()
-        return
-    
-    def runCurveHome(self):
-        self.autoArc(160, 20, 100, 4)
-        self.autoDrive(FORWARD, 200, MM, 100, timeoutSecs=2)  # go forward a bit
-        self.autoArc(140, 20, 100, 3)
-        self.autoDrive(FORWARD, 500, MM, 100, timeoutSecs=2)  # Wall slide
-        self.stopAll()
-        self.finishCheckpoint()
-        self.finishRun()
-        return
-    
-    def runGoal3(self):
+    def runRepeat(self):
         self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
         self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
         self.autoTurn(LEFT, 52, DEGREES, 100 , PERCENT)
         self.autoDrive(REVERSE, 350, MM, 100, PERCENT, timeoutSecs=3)
-        self.autoDump()
         self.stopAll()
        
 
