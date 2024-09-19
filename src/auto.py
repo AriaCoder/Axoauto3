@@ -33,15 +33,41 @@ class Bot:
         self.catapultRight = Motor(Ports.PORT11)
         self.hDriveMotor = Motor(Ports.PORT9)
         self.startAuto = Touchled(Ports.PORT10)
+        self.catapultSensor = Distance(Ports. PORT2)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
+
+    def setupHDrive(self):
+        self.hDrive = MotorGroup( self.hDriveMotor)
+        self.hDrive.set_velocity(100, PERCENT)
 
     def setupIntake(self):
         self.intake = MotorGroup(self.intakeMotor)
-        self.intake.set_velocity(100, PERCENT)
+
+    def startIntake(self):
+        self.intakeMotor.spin(FORWARD, 100, PERCENT)
 
     def setupCatapult(self):
         self.catapult = MotorGroup(self.catapultLeft, self.catapultRight)
-        self.catapult.set_velocity(100, PERCENT)
+        self.catapult.set_velocity(50)
+        self.catapult.set_stopping(HOLD)
+
+    def windCatapult(self):  # Up Button
+        while not self.catapultDown:
+            self.catapult.spin(FORWARD)
+            self.checkCatapultDown()
+            wait(100, MSEC)
+            print("hi")
+        self.catapult.stop(HOLD)
+
+    def checkCatapultDown(self):
+        if self.catapultSensor.object_distance(MM) < 30:
+            self.catapultDown = True
+            self.print("DOWN!")
+
+    def releaseCatapult(self): # Down Button
+        if self.catapultDown == True:
+            self.catapult.spin_for(FORWARD, 360, DEGREES)
+            self.checkCatapultDown()
 
     def setupSelector(self):
         self.brain.buttonRight.pressed(self.onBrainButtonRight)
@@ -100,9 +126,6 @@ class Bot:
         self.brain.screen.set_pen_color(self.penColor)
         self.brain.screen.print(message)
         self.brain.screen.new_line()
-
-    def startIntake(self):
-        self.intake.spin(REVERSE, 100, PERCENT)
 
     def setupDrive(self):
         self.motorLeft.set_velocity(0, PERCENT)
@@ -195,6 +218,17 @@ class Bot:
             if timeoutSecs != 100:  # Restore timeout for future driveTrain users
                 self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
 
+    def autoHdrive(self, direction, distance, units=DistanceUnits.IN, velocity=100,
+                    units_v:VelocityPercentUnits=VelocityUnits.RPM, wait=True, timeoutSecs=100):
+         if self.driveTrain is not None:
+            if timeoutSecs != 100:
+                self.driveTrain.set_timeout(timeoutSecs, TimeUnits.SECONDS)
+            self.driveTrain.drive_for(direction, distance, units, velocity, units_v, wait)
+            if timeoutSecs != 100:  # Restore timeout for future driveTrain users
+                self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
+
+        
+
     def autoArc(self, headingTarget: float, leftVelocityPercent: int, rightVelocityPercent: int, timeoutSecs=100):
         if timeoutSecs != 100:
             self.motorLeft.set_timeout(timeoutSecs)
@@ -244,9 +278,12 @@ class Bot:
 
     def runNearGoal(self):
         self.setupAutoDriveTrain(calibrate=False)
-        self.intake.spin(FORWARD, 100, PERCENT)
-        self.autoDrive(FORWARD, 500, MM, 100, PERCENT, wait=True, timeoutSecs=6)
-        self.autoDrive(REVERSE, 500, MM, 100, PERCENT, wait=True)  # Return home
+        self.autoHdrive(FORWARD, 18, INCHES, 100, PERCENT)
+        self.autoDrive(REVERSE, 8, INCHES, 100, PERCENT, wait=True, timeoutSecs=6)
+        self.autoDrive(FORWARD, 25, MM, 100, PERCENT, wait=True)  # Return home
+        self.autoDrive(REVERSE, 27, INCHES, 100, PERCENT)
+        self.catapult.spin(FORWARD, 100, PERCENT)
+
 
 
     def runFarGoal(self):
