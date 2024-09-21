@@ -32,9 +32,23 @@ class Bot:
         self.catapultLeft = Motor(Ports.PORT3)
         self.catapultRight = Motor(Ports.PORT11)
         self.hDriveMotor = Motor(Ports.PORT9)
-        self.startAuto = Touchled(Ports.PORT10)
+        self.healthLed = Touchled(Ports.PORT10)
         self.catapultSensor = Distance(Ports. PORT2)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
+
+    def setupHealthled(self):
+        color = Color.RED
+        capacity = self.brain.battery.capacity()
+        if capacity > 95:
+            color = Color.BLUE
+        elif capacity > 90:
+            color = Color.GREEN
+        elif capacity > 80:
+            color = Color.YELLOW_ORANGE
+        else:
+            self.print("Battery too low for auto")
+            color = Color.RED
+        self.healthLed.set_color(color)
 
     def setupHDrive(self):
         self.hDrive = MotorGroup( self.hDriveMotor)
@@ -44,30 +58,37 @@ class Bot:
         self.intake = MotorGroup(self.intakeMotor)
 
     def startIntake(self):
-        self.intakeMotor.spin(FORWARD, 100, PERCENT)
+        if self.isCatapultDown:
+            self.intakeMotor.spin(FORWARD, 100, PERCENT)
+        else:
+            self.windCatapult()
+            self.intakeMotor.spin(FORWARD, 100, PERCENT)
 
     def setupCatapult(self):
-        self.catapult = MotorGroup(self.catapultLeft, self.catapultRight)
-        self.catapult.set_velocity(50)
-        self.catapult.set_stopping(HOLD)
+        self.catapultLeft.set_velocity(50)
+        self.catapultRight.set_velocity(50)
+        self.catapultLeft.set_stopping(HOLD)
+        self.catapultRight.set_stopping(HOLD)
 
     def windCatapult(self):  # Up Button
-        while not self.catapultDown:
-            self.catapult.spin(FORWARD)
-            self.checkCatapultDown()
-            wait(100, MSEC)
-            print("hi")
-        self.catapult.stop(HOLD)
+        while not self.isCatapultDown:
+            self.catapultRight.spin(FORWARD)
+            self.catapultLeft.spin(FORWARD)
+            self.isCatapultDown()
+ 
+        self.catapultRight.stop(HOLD)
+        self.catapultLeft.stop(HOLD)
 
-    def checkCatapultDown(self):
-        if self.catapultSensor.object_distance(MM) < 30:
-            self.catapultDown = True
-            self.print("DOWN!")
+    def isCatapultDown(self):
+        return self.catapultSensor.object_distance(MM) < 30
+
 
     def releaseCatapult(self): # Down Button
-        if self.catapultDown == True:
-            self.catapult.spin_for(FORWARD, 360, DEGREES)
-            self.checkCatapultDown()
+        if self.isCatapultDown:
+            self.catapultLeft.spin_for(FORWARD, 360, DEGREES)
+            self.catapultRight.spin_for(FORWARD, 360, DEGREES)
+            self.isCatapultDown()
+            self.windCatapult()
 
     def setupSelector(self):
         self.brain.buttonRight.pressed(self.onBrainButtonRight)
@@ -139,22 +160,8 @@ class Bot:
         if self.driveTrain:
             self.driveTrain.stop(HOLD)
         self.intake.stop(COAST)
-        self.catapult.stop(COAST)
-
-   # def checkHealth(self):
-        #Copied from our code for Slapshot 2022-23 season
-      #      color = Color.RED
-   # capacity = self.brain.battery.capacity()
-    #if capacity > 95:
-     #       color = Color.BLUE
-    #elif capacity > 85:
-    #        color = Color.GREEN
-   # elif capacity > 81:
-    #        color = Color.ORANGE
-    #else:
-    #        self.print("Battery level is too low for auton")
-     #       color = Color.RED
-      #  self.healthLed.set_color(color
+        self.catapultLeft.stop(COAST)
+        self.catapultRight.stop(COAST)
 
     def setupAutoDriveTrain(self, calibrate=True):
         # Use DriveTrain in autonomous. Easier to do turns.
@@ -165,12 +172,13 @@ class Bot:
         if not self.driveTrain:
             self.driveTrain = DriveTrain(self.motorLeft,
                                             self.motorRight,
-                                            wheelTravel=200,
-                                            trackWidth=200.025,
-                                            wheelBase=165.1,
-                                            units=DistanceUnits.MM,
-                                            externalGearRatio=1)  # TODO: Is this correct?
+                                            wheelTravel= 78.74,
+                                            trackWidth=9.875,
+                                            wheelBase=5.5,
+                                            units=DistanceUnits.IN,
+                                            externalGearRatio=2)  # TODO: Is this correct?
             if calibrate:
+                self.windCatapult()
                 return self.calibrate()
             return True
 
@@ -277,22 +285,22 @@ class Bot:
         self.brain.play_sound(SoundType.TADA)
 
     def runNearGoal(self):
-        self.setupAutoDriveTrain(calibrate=False)
-        self.autoHdrive(FORWARD, 18, INCHES, 100, PERCENT)
+        self.setupAutoDriveTrain(calibrate=True)
+        self.autoHdrive(REVERSE, 18, INCHES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 35, INCHES, 100, PERCENT, wait=True, timeoutSecs=2)
+        self.releaseCatapult()
         self.autoDrive(FORWARD, 25, INCHES, 100, PERCENT, wait=True)  # Return home
         self.autoDrive( REVERSE, 8, INCHES, 100, PERCENT)
-        self.catapult.spin(FORWARD, 100, PERCENT)
+        self.catapultLeft.spin(FORWARD, 100, PERCENT)
+        self.catapultRight.spin(FORWARD, 100, PERCENT)
 
 
     def runFarGoal(self):
+        self.brain.screen.print("wrong goal!")
         self.startIntake()
         self.autoDrive(FORWARD, 360, MM, 45, PERCENT)
         self.autoTurn(LEFT, 2, DEGREES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 260, MM, 35, PERCENT)
-
-    def test(self):
-        self.brain.screen.print()
     
     def runRepeat(self):
         self.intake.spin(REVERSE, 100, PERCENT)
