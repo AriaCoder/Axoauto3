@@ -38,7 +38,7 @@ class Bot:
 
     def setupHDrive(self):
         self.hDrive = MotorGroup( self.hDriveMotor)
-        self.hDrive.set_velocity(100, PERCENT)
+        self.hDrive.set_velocity( 100, PERCENT)
 
     def setupIntake(self):
         self.intake = MotorGroup(self.intakeMotor)
@@ -279,11 +279,10 @@ class Bot:
     def runNearGoal(self):
         self.setupAutoDriveTrain(calibrate=False)
         self.autoHdrive(FORWARD, 18, INCHES, 100, PERCENT)
-        self.autoDrive(REVERSE, 8, INCHES, 100, PERCENT, wait=True, timeoutSecs=6)
-        self.autoDrive(FORWARD, 25, MM, 100, PERCENT, wait=True)  # Return home
-        self.autoDrive(REVERSE, 27, INCHES, 100, PERCENT)
+        self.autoDrive(REVERSE, 35, INCHES, 100, PERCENT, wait=True, timeoutSecs=2)
+        self.autoDrive(FORWARD, 25, INCHES, 100, PERCENT, wait=True)  # Return home
+        self.autoDrive( REVERSE, 8, INCHES, 100, PERCENT)
         self.catapult.spin(FORWARD, 100, PERCENT)
-
 
 
     def runFarGoal(self):
@@ -291,6 +290,9 @@ class Bot:
         self.autoDrive(FORWARD, 360, MM, 45, PERCENT)
         self.autoTurn(LEFT, 2, DEGREES, 100, PERCENT, timeoutSecs=2)
         self.autoDrive(REVERSE, 260, MM, 35, PERCENT)
+
+    def test(self):
+        self.brain.screen.print()
     
     def runRepeat(self):
         self.intake.spin(REVERSE, 100, PERCENT)
