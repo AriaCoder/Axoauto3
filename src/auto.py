@@ -4,9 +4,9 @@ from vex import *
 
 
 class Bot:
-    MODES = ["NEAR_GOAL", "FAR_GOAL", "REPEAT"]
-    MODE_COLORS = [Color.YELLOW_GREEN, Color.BLUE, Color.VIOLET]
-    MODE_PEN_COLORS = [Color.BLACK, Color.WHITE, Color. WHITE]
+    MODES = ["CALIBRATE", "NEAR_GOAL", "FAR_GOAL", "REPEAT"]
+    MODE_COLORS = [Color.CYAN, Color.YELLOW_GREEN, Color.BLUE, Color.VIOLET]
+    MODE_PEN_COLORS = [Color.BLACK, Color.BLACK, Color.WHITE, Color. WHITE]
 
     def __init__(self):
         self.isAutoRunning = False
@@ -21,6 +21,7 @@ class Bot:
         self.inertial = Inertial()
         self.setupPortMappings()
         self.setupDrive()
+        self.setupHDrive()
         self.setupIntake()
         self.setupCatapult()
         self.setupSelector()
@@ -29,10 +30,10 @@ class Bot:
         self.motorLeft = Motor(Ports.PORT7,1,True)
         self.motorRight = Motor(Ports.PORT12,1, False)
         self.intakeMotor = Motor(Ports.PORT1,1,True)
-        self.catapultLeft = Motor(Ports.PORT3)
+        self.wheelCenter = Motor(Ports.PORT10)
         self.catapultRight = Motor(Ports.PORT11)
-        self.hDriveMotor = Motor(Ports.PORT9)
-        self.healthLed = Touchled(Ports.PORT10)
+        self.catapultLeft = Motor(Ports.PORT3, True)
+        self.healthLed = Touchled(Ports.PORT9)
         self.catapultSensor = Distance(Ports. PORT2)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
 
@@ -51,8 +52,9 @@ class Bot:
         self.healthLed.set_color(color)
 
     def setupHDrive(self):
-        self.hDrive = MotorGroup( self.hDriveMotor)
-        self.hDrive.set_velocity( 100, PERCENT)
+        self.wheelCenter.set_velocity(100, PERCENT)
+        self.wheelCenter.set_max_torque(100, PERCENT)
+        self.wheelCenter.set_stopping(HOLD)
 
     def setupIntake(self):
         self.intake = MotorGroup(self.intakeMotor)
@@ -65,23 +67,24 @@ class Bot:
             self.intakeMotor.spin(FORWARD, 100, PERCENT)
 
     def setupCatapult(self):
-        self.catapultLeft.set_velocity(50)
-        self.catapultRight.set_velocity(50)
+        self.catapultLeft.set_velocity(100, PERCENT)
+        self.catapultRight.set_velocity(100, PERCENT)
+        self.catapultLeft.set_max_torque(100, PERCENT)
+        self.catapultRight.set_max_torque(100, PERCENT)
         self.catapultLeft.set_stopping(HOLD)
         self.catapultRight.set_stopping(HOLD)
 
     def windCatapult(self):  # Up Button
-        while not self.isCatapultDown:
+        while not self.isCatapultDown():
             self.catapultRight.spin(FORWARD)
             self.catapultLeft.spin(FORWARD)
-            self.isCatapultDown()
+            wait(200, MSEC)
  
         self.catapultRight.stop(HOLD)
         self.catapultLeft.stop(HOLD)
 
     def isCatapultDown(self):
         return self.catapultSensor.object_distance(MM) < 30
-
 
     def releaseCatapult(self): # Down Button
         if self.isCatapultDown:
@@ -106,10 +109,12 @@ class Bot:
         else:
             self.isAutoRunning = True
             if self.modeNumber == 0:
-                self.runNearGoal()
+                self.runCalibrate()
             elif self.modeNumber == 1:
-                self.runFarGoal()
+                self.runNearGoal()
             elif self.modeNumber == 2:
+                self.runFarGoal()
+            elif self.modeNumber == 3:
                 self.runRepeat()
             self.isAutoRunning = False
             self.print("Done")
@@ -176,7 +181,7 @@ class Bot:
                                             trackWidth=9.875,
                                             wheelBase=5.5,
                                             units=DistanceUnits.IN,
-                                            externalGearRatio=2)  # TODO: Is this correct?
+                                            externalGearRatio=0.5)  # TODO: Is this correct?
             if calibrate:
                 self.windCatapult()
                 return self.calibrate()
@@ -228,14 +233,25 @@ class Bot:
 
     def autoHdrive(self, direction, distance, units=DistanceUnits.IN, velocity=100,
                     units_v:VelocityPercentUnits=VelocityUnits.RPM, wait=True, timeoutSecs=100):
-         if self.driveTrain is not None:
+         if self.wheelCenter is not None:
+            if not self.isCalibrated:
+                self.calibrate()
             if timeoutSecs != 100:
-                self.driveTrain.set_timeout(timeoutSecs, TimeUnits.SECONDS)
-            self.driveTrain.drive_for(direction, distance, units, velocity, units_v, wait)
-            if timeoutSecs != 100:  # Restore timeout for future driveTrain users
-                self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
+                self.wheelCenter.set_timeout(timeoutSecs, TimeUnits.SECONDS)
+            # Calculate spins
+            spins = distance
+            if units == DistanceUnits.IN:
+                gearRatio = 2
+                wheelDiameterMM = 200
+                spins = (distance * (wheelDiameterMM * 0.0393701)) / gearRatio
 
-        
+                self.brain.play_sound(SoundType.TADA)
+                self.brain.screen.clear_screen()
+                self.print(spins)
+
+                self.wheelCenter.spin_for(direction, spins, TURNS, velocity, units_v, wait)
+            if timeoutSecs != 100:  # Restore timeout for future driveTrain users
+                self.wheelCenter.set_timeout(100, TimeUnits.SECONDS)
 
     def autoArc(self, headingTarget: float, leftVelocityPercent: int, rightVelocityPercent: int, timeoutSecs=100):
         if timeoutSecs != 100:
@@ -284,9 +300,18 @@ class Bot:
     def finishRun(self):        
         self.brain.play_sound(SoundType.TADA)
 
+    def runCalibrate(self):
+        self.setupAutoDriveTrain(calibrate=False)
+        self.windCatapult()
+        self.calibrate()
+
     def runNearGoal(self):
-        self.setupAutoDriveTrain(calibrate=True)
-        self.autoHdrive(REVERSE, 18, INCHES, 100, PERCENT, timeoutSecs=2)
+        self.autoHdrive(REVERSE, 10 , DistanceUnits.IN, 100, PERCENT, timeoutSecs=4)
+        self.autoDrive(REVERSE, 20, DistanceUnits.IN, 100, PERCENT) # Drives back to make room for ball
+        self.autoDrive(FORWARD, 10, DistanceUnits.IN, 100, PERCENT) #Collects the ball that is loaded
+        #self.autoDrive(REVERSE, 15, INCHES, 100, PERCENT) #Drive back to the goal
+        
+        return
         self.autoDrive(REVERSE, 35, INCHES, 100, PERCENT, wait=True, timeoutSecs=2)
         self.releaseCatapult()
         self.autoDrive(FORWARD, 25, INCHES, 100, PERCENT, wait=True)  # Return home
