@@ -177,10 +177,10 @@ class Bot:
         if not self.driveTrain:
             self.driveTrain = DriveTrain(self.motorLeft,
                                             self.motorRight,
-                                            wheelTravel= 78.74,
-                                            trackWidth=9.875,
-                                            wheelBase=5.5,
-                                            units=DistanceUnits.IN,
+                                            wheelTravel= 145,
+                                            trackWidth=246,
+                                            wheelBase=200,
+                                            units=DistanceUnits.MM,
                                             externalGearRatio=0.5)  # TODO: Is this correct?
             if calibrate:
                 self.windCatapult()
@@ -210,7 +210,7 @@ class Bot:
             self.brain.play_sound(SoundType.POWER_DOWN)
             return False
 
-    def autoDrive(self, direction, distance, units=DistanceUnits.IN,
+    def autoDrive(self, direction, distance, units=DistanceUnits.MM,
                   velocity=100, units_v:VelocityPercentUnits=VelocityUnits.RPM,
                   wait=True, timeoutSecs=100):
         if self.driveTrain is not None:
@@ -231,7 +231,7 @@ class Bot:
             if timeoutSecs != 100:  # Restore timeout for future driveTrain users
                 self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
 
-    def autoHdrive(self, direction, distance, units=DistanceUnits.IN, velocity=100,
+    def autoHdrive(self, direction, distance, units=DistanceUnits.MM, velocity=100,
                     units_v:VelocityPercentUnits=VelocityUnits.RPM, wait=True, timeoutSecs=100):
          if self.wheelCenter is not None:
             if not self.isCalibrated:
@@ -240,9 +240,9 @@ class Bot:
                 self.wheelCenter.set_timeout(timeoutSecs, TimeUnits.SECONDS)
             # Calculate spins
             spins = distance
-            if units == DistanceUnits.IN:
-                gearRatio = 2
-                wheelDiameterMM = 200
+            if units == DistanceUnits.MM:
+                gearRatio = 0.5
+                wheelDiameterMM = 63.5
                 spins = (distance * (wheelDiameterMM * 0.0393701)) / gearRatio
 
                 self.brain.play_sound(SoundType.TADA)
@@ -302,14 +302,14 @@ class Bot:
 
     def runCalibrate(self):
         self.setupAutoDriveTrain(calibrate=False)
-        self.windCatapult()
+       # self.windCatapult()
         self.calibrate()
 
     def runNearGoal(self):
-        self.autoHdrive(REVERSE, 10 , DistanceUnits.IN, 100, PERCENT, timeoutSecs=4)
-        self.autoDrive(REVERSE, 20, DistanceUnits.IN, 100, PERCENT) # Drives back to make room for ball
-        self.autoDrive(FORWARD, 10, DistanceUnits.IN, 100, PERCENT) #Collects the ball that is loaded
-        #self.autoDrive(REVERSE, 15, INCHES, 100, PERCENT) #Drive back to the goal
+        self.autoHdrive(REVERSE, 20 , DistanceUnits.MM, 70, PERCENT, timeoutSecs=2)
+        #self.autoDrive(REVERSE, 500, DistanceUnits.MM, 80, PERCENT) # Drives back to make room for ball
+        #self.autoDrive(FORWARD, 100, DistanceUnits.MM, 80, PERCENT) #Collects the ball that is loaded
+        #self.autoDrive(REVERSE, 15, DistanceUnits.MM, 100, PERCENT) #Drive back to the goal
         
         return
         self.autoDrive(REVERSE, 35, INCHES, 100, PERCENT, wait=True, timeoutSecs=2)
