@@ -181,7 +181,7 @@ class Bot:
                                             trackWidth=246,
                                             wheelBase=200,
                                             units=DistanceUnits.MM,
-                                            externalGearRatio=0.5)  # TODO: Is this correct?
+                                            externalGearRatio=2)  # TODO: Is this correct?
             if calibrate:
                 self.windCatapult()
                 return self.calibrate()
@@ -239,11 +239,11 @@ class Bot:
             if timeoutSecs != 100:
                 self.wheelCenter.set_timeout(timeoutSecs, TimeUnits.SECONDS)
             # Calculate spins
-            spins = distance
+            spins = distance/200
             if units == DistanceUnits.MM:
-                gearRatio = 0.5
+                gearRatio = 2
                 wheelDiameterMM = 63.5
-                spins = (distance * (wheelDiameterMM * 0.0393701)) / gearRatio
+                spins = (distance/gearRatio)/200
 
                 self.brain.play_sound(SoundType.TADA)
                 self.brain.screen.clear_screen()
@@ -278,8 +278,8 @@ class Bot:
             lastHeading = heading
             sleep(100, MSEC)
 
-        self.motorLeft.stop(BRAKE)
-        self.motorRight.stop(BRAKE)
+        self.motorLeft.stop(COAST)
+        self.motorRight.stop(COAST)
 
         if timeoutSecs != 100:  # Restore old value?
             self.motorLeft.set_timeout(100)
@@ -306,7 +306,8 @@ class Bot:
         self.calibrate()
 
     def runNearGoal(self):
-        self.autoHdrive(REVERSE, 20 , DistanceUnits.MM, 70, PERCENT, timeoutSecs=2)
+        self.autoDrive( FORWARD, 100, DistanceUnits.MM, 50, PERCENT, timeoutSecs=2)
+        #self.autoHdrive( REVERSE, 120, DistanceUnits.MM, 50, PERCENT, timeoutSecs=2)
         #self.autoDrive(REVERSE, 500, DistanceUnits.MM, 80, PERCENT) # Drives back to make room for ball
         #self.autoDrive(FORWARD, 100, DistanceUnits.MM, 80, PERCENT) #Collects the ball that is loaded
         #self.autoDrive(REVERSE, 15, DistanceUnits.MM, 100, PERCENT) #Drive back to the goal
