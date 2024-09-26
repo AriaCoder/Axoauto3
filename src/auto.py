@@ -35,6 +35,7 @@ class Bot:
         self.catapultLeft = Motor(Ports.PORT3, True)
         self.healthLed = Touchled(Ports.PORT9)
         self.catapultSensor = Distance(Ports. PORT2)
+        self.catapultBumper = Bumper(Ports.PORT8)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
 
     def setupHealthled(self):
@@ -65,6 +66,10 @@ class Bot:
         else:
             self.windCatapult()
             self.intakeMotor.spin(FORWARD, 100, PERCENT)
+
+    def onCatapultBumper(self):
+        if self.catapultBumper.pressed:
+         self.releaseCatapult()
 
     def setupCatapult(self):
         self.catapultLeft.set_velocity(100, PERCENT)
@@ -200,6 +205,7 @@ class Bot:
             self.print("Cancelled Calibration!")
             return False
         elif countdown > 0 and not self.inertial.is_calibrating():
+            self.windCatapult()
             self.print("Calibrated")
             self.brain.play_sound(SoundType.TADA)
             self.isCalibrated = True
@@ -239,10 +245,10 @@ class Bot:
             if timeoutSecs != 100:
                 self.wheelCenter.set_timeout(timeoutSecs, TimeUnits.SECONDS)
             # Calculate spins
-            spins = distance/200
+            spins = distance/2/200
             if units == DistanceUnits.MM:
                 gearRatio = 2
-                wheelDiameterMM = 63.5
+                #wheelDiameterMM = 63.5
                 spins = (distance/gearRatio)/200
 
                 self.brain.play_sound(SoundType.TADA)
@@ -273,7 +279,7 @@ class Bot:
                 sameHeadings += 1
             else:
                 sameHeadings = 0
-            if sameHeadings > 5:  # Stuck
+            if sameHeadings > 5:  # Stuck 
                 break
             lastHeading = heading
             sleep(100, MSEC)
@@ -306,11 +312,15 @@ class Bot:
         self.calibrate()
 
     def runNearGoal(self):
-        self.autoDrive( FORWARD, 100, DistanceUnits.MM, 50, PERCENT, timeoutSecs=2)
-        #self.autoHdrive( REVERSE, 120, DistanceUnits.MM, 50, PERCENT, timeoutSecs=2)
-        #self.autoDrive(REVERSE, 500, DistanceUnits.MM, 80, PERCENT) # Drives back to make room for ball
-        #self.autoDrive(FORWARD, 100, DistanceUnits.MM, 80, PERCENT) #Collects the ball that is loaded
-        #self.autoDrive(REVERSE, 15, DistanceUnits.MM, 100, PERCENT) #Drive back to the goal
+        self.windCatapult
+        self.intake.spin(FORWARD, 100, PERCENT)
+        self.autoHdrive(REVERSE, 530, DistanceUnits.MM, 50, PERCENT, timeoutSecs=4)
+        self.autoDrive(REVERSE, 750, DistanceUnits.MM, 80, PERCENT) # Drives back to make room for ball
+        self.autoDrive(FORWARD, 300, DistanceUnits.MM, 80, PERCENT) #Collects the ball that is loaded
+        self.autoDrive(REVERSE, 200, DistanceUnits.MM, 100, PERCENT, timeoutSecs=2) #Drive back to the goal
+        self.autoTurn(LEFT, 10, DEGREES, 50, PERCENT) #Lines up with goal
+        self.autoDrive( REVERSE, 300, DistanceUnits.MM, 80, PERCENT)
+        self.releaseCatapult()
         
         return
         self.autoDrive(REVERSE, 35, INCHES, 100, PERCENT, wait=True, timeoutSecs=2)
