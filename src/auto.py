@@ -21,17 +21,17 @@ class Bot:
         self.inertial = Inertial()
         self.setupPortMappings()
         self.setupDrive()
-        self.setupIntake()
         self.setupCatapult()
         self.setupSelector()
         self.setupCatapultBumper()
         self.setupHealthLed()
-        self.runCurrentModeNumber()
+        #self.runCurrentModeNumber()
 
     def setupPortMappings(self):
         self.motorLeft = Motor(Ports.PORT7,1,True)
         self.motorRight = Motor(Ports.PORT12,1, False)
-        self.intakeMotor = Motor(Ports.PORT1,1,True)
+        self.intakeLeft = Motor(Ports.PORT1,1,True)
+        self.intakeRight = Motor(Ports.PORT1,4)
         self.healthLedLeft = Touchled(Ports.PORT10)
         self.catapultRight = Motor(Ports.PORT11)
         self.catapultLeft = Motor(Ports.PORT3, True)
@@ -39,6 +39,9 @@ class Bot:
         self.catapultSensor = Distance(Ports. PORT2)
         self.catapultBumper = Bumper(Ports.PORT8)
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
+
+    def onCatapultBumperPressed(self):
+        self.releaseCatapult()
 
     def setupHealthled(self):
         color = Color.RED
@@ -61,19 +64,22 @@ class Bot:
         self.runCurrentModeNumber()
 
     def runCurrentModeNumber(self):
-        if self.modeNumber is not None:
-            self.modeNumber = None
+         if self.modeFunction != None:
+            f = self.modeFunction
+            self.modeFunction = None  # Clear out the function before running it
+            f()  # You're allowed to "run" a function variable
             self.print("Done")
 
-    def setupIntake(self):
-        self.intake = MotorGroup(self.intakeMotor)
 
     def startIntake(self):
         if self.isCatapultDown:
-            self.intakeMotor.spin(FORWARD, 100, PERCENT)
+            self.intakeLeft.spin(FORWARD, 100, PERCENT)
+            self.intakeRight.spin(FORWARD, 100, PERCENT)
         else:
             self.windCatapult()
-            self.intakeMotor.spin(FORWARD, 100, PERCENT)
+            self.intakeLeft.spin(FORWARD, 100, PERCENT)
+            self.intakeRight.spin(FORWARD, 100, PERCENT)
+
 
     def setupCatapultBumper(self):
         pass
@@ -176,7 +182,8 @@ class Bot:
     def stopAll(self):
         if self.driveTrain:
             self.driveTrain.stop(HOLD)
-        self.intake.stop(COAST)
+        self.intakeLeft.stop(COAST)
+        self.intakeRight.stop(COAST)
         self.catapultLeft.stop(COAST)
         self.catapultRight.stop(COAST)
 
@@ -320,12 +327,12 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult
-        #self.intake.spin(FORWARD, 100, PERCENT)
-        self.autoDrive(FORWARD, 200, DistanceUnits.MM, 40, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 90, DEGREES, 30, PERCENT) # Turns to face goal
-        self.autoDrive(REVERSE, 1000, DistanceUnits.MM, 65, PERCENT, timeoutSecs=2) #goes back
-        self.autoDrive(FORWARD, 200, DistanceUnits.MM, 60, PERCENT) #collects ball
-        self.autoDrive(REVERSE, 500, DistanceUnits.MM, 60, PERCENT, timeoutSecs=2) #Drives to goal
+        self.intake.spin(FORWARD, 100, PERCENT)
+        self.autoDrive(FORWARD, 250, DistanceUnits.MM, 40, PERCENT, timeoutSecs=2)
+        self.autoTurn(LEFT, 90, DEGREES, , PERCENT) # Turns to face goal
+        self.autoDrive(REVERSE, 1800, DistanceUnits.MM, 70, PERCENT, timeoutSecs=2) #goes back
+        self.autoDrive(FORWARD, 300, DistanceUnits.MM, 60, PERCENT) #collects ball
+        self.autoDrive(REVERSE, 1000, DistanceUnits.MM, 100, PERCENT, timeoutSecs=2) #Drives to goal
         self.autoTurn(RIGHT, 10, DEGREES, 50, PERCENT)#Wiggles in the goal
         self.releaseCatapult()
         
