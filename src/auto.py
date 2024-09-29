@@ -1,6 +1,7 @@
 # AXOBOTL Python Code
 # Extreme Axolotls Robotics team 4028X for 2023-2024 VEX IQ Full Volume Challenge
 from vex import *
+import time
 
 
 class Bot:
@@ -24,7 +25,7 @@ class Bot:
         self.setupCatapult()
         self.setupSelector()
         self.setupCatapultBumper()
-        self.setupHealthLed()
+        #self.setupHealthLed()
         #self.runCurrentModeNumber()
 
     def setupPortMappings(self):
@@ -57,18 +58,18 @@ class Bot:
             color = Color.RED
         self.healthLedRight.set_color(color)
 
-    def setupHealthLed(self):
-        self.healthLedRight.pressed(self.onHealthLedRightPressed)
+    #def setupHealthLed(self):
+     #   self.healthLedRight.pressed(self.onHealthLedRightPressed)
 
-    def onHealthLedRightPressed(self):
-        self.runCurrentModeNumber()
+    #def onHealthLedRightPressed(self):
+      #  self.runCurrentModeNumber()
 
-    def runCurrentModeNumber(self):
-         if self.modeFunction != None:
-            f = self.modeFunction
-            self.modeFunction = None  # Clear out the function before running it
-            f()  # You're allowed to "run" a function variable
-            self.print("Done")
+   # def runCurrentModeNumber(self):
+      #   if self.modeFunction != None:
+        #    f = self.modeFunction
+         #   self.modeFunction = None  # Clear out the function before running it
+        #    f()  # You're allowed to "run" a function variable
+        #    self.print("Done")
 
 
     def startIntake(self):
@@ -426,14 +427,16 @@ class Bot:
         self.calibrate()
 
     def runNearGoal(self):
-        self.windCatapult
+        self.windCatapult()
         self.intake.spin(FORWARD, 100, PERCENT)
-        self.autoDrive(FORWARD, 250, DistanceUnits.MM, 40, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 90, DEGREES, , PERCENT) # Turns to face goal
-        self.autoDrive(REVERSE, 1800, DistanceUnits.MM, 70, PERCENT, timeoutSecs=2) #goes back
-        self.autoDrive(FORWARD, 300, DistanceUnits.MM, 60, PERCENT) #collects ball
-        self.autoDrive(REVERSE, 1000, DistanceUnits.MM, 100, PERCENT, timeoutSecs=2) #Drives to goal
-        self.autoTurn(RIGHT, 10, DEGREES, 50, PERCENT)#Wiggles in the goal
+        self.goStraight(35, 25, timeoutSecs=2)
+        self.autoTurn(LEFT, 90, DEGREES, 25, PERCENT) # Turns to face goal
+        self.goStraight(-50, 80, timeoutSecs=3) #goes back
+        self.goStraight(50, 15, timeoutSecs=2) #collects ball
+        self.goStraight(-100, 20, timeoutSecs=1) #Drives to goal
+        self.autoTurn(LEFT, 15, DEGREES, 50, PERCENT, timeoutSecs=2)#Wiggles in the goal
+        self.goStraight(-100, 40, timeoutSecs=2)
+        self.goStraight(-50, 5, timeoutSecs=1)
         self.releaseCatapult()
         
         return
@@ -453,7 +456,7 @@ class Bot:
         self.autoDrive(REVERSE, 260, MM, 35, PERCENT)
     
     def runRepeat(self):
-        self.intake.spin(REVERSE, 100, PERCENT)
+        #self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
         self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
         self.autoTurn(LEFT, 52, DEGREES, 100 , PERCENT)
