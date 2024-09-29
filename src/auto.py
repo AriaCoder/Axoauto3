@@ -230,6 +230,106 @@ class Bot:
             self.brain.play_sound(SoundType.POWER_DOWN)
             return False
 
+    def goTurn(self,
+                velocity: float,
+                angle: float,
+                timeoutSecs: int = 0):
+        while True:
+            h = self.inertial.heading()
+            goal = angle - h
+            if abs(goal) <= 0.01: # good enough
+                break
+            leftVelocity = velocity - ((goal * 50)/180)
+            rightVelocity = velocity + ((goal * 50)/180)
+            print("{:}")
+
+    def goStraight(self,
+                   velocity: float,
+                   distanceIN: float,
+                   timeoutSecs: int = 0,
+                   wheelDiameterMM: int = 200,
+                   driveGearRatio: float = 0.5):
+        taperTurns = 0.75     # Turns remaining on wheels before start tapering
+        convertINtoMM = 25.4
+        wheelDiameterMM = 200
+        distanceMM = distanceIN * convertINtoMM
+        turnsNeeded = (distanceMM / wheelDiameterMM) * driveGearRatio
+
+        self.motorLeft.set_velocity(velocity, PERCENT)
+        self.motorRight.set_velocity(velocity, PERCENT)
+        self.motorLeft.set_position(0, RotationUnits.REV)
+        self.motorRight.set_position(0, RotationUnits.REV)
+        self.motorLeft.spin(FORWARD)
+        self.motorRight.spin(FORWARD)
+        baseHeading = self.inertial.heading()
+        h = 0 
+        damper = 1.0
+
+        startTime = time.time()
+        while True:
+            h = self.inertial.heading() - baseHeading
+            # Heading is 0-359.99 degrees.
+            # Map the delta to -45 to 45 degrees with a step function
+            # That 45-degrees is arbitrary.
+            if h > 315:
+                d = h - 360
+            elif h > 180:
+                d = -45  # Don't allow angles > 45-deg either way
+            elif h > 45:
+                d = 45
+            else:
+                d = h
+
+            if abs(d) > 0.01: # Ignore small changes
+                # Don't change velocity by more than 50% on either wheel
+                # Adjust in proportion to delta of the 45 degrees
+                adjustment = (50 * d)/45
+            else:
+                adjustment = 0
+
+            # Taper speed as we approach our target # of turns
+            leftPos = self.motorLeft.position(RotationUnits.REV)
+            rightPos = self.motorRight.position(RotationUnits.REV)
+            turns = (leftPos + rightPos) / 2  # Take an average...why not?
+            remaining = turnsNeeded - abs(turns)
+            leftVelocity = 0
+            rightVelocity = 0
+            if remaining <= 0.0:
+                velocity = 0
+                adjustment = 0
+            elif remaining <= taperTurns:   # Set new velocity when not many turns are left
+                damper = (remaining / taperTurns) if remaining >= 0 else 0.0
+                leftVelocity = (velocity * damper)
+                rightVelocity = (velocity * damper)
+                if (abs(leftVelocity) < 20): # velocity too low doesn't work well
+                    leftVelocity = 20 if velocity > 0 else -20
+                if (abs(rightVelocity) < 20): # velocity too low doesn't work well
+                    rightVelocity = 20 if velocity > 0 else -20
+                leftVelocity -= adjustment
+                rightVelocity += adjustment
+            else:
+                leftVelocity = velocity - adjustment
+                rightVelocity = velocity + adjustment
+                
+            self.motorLeft.set_velocity(leftVelocity)
+            self.motorRight.set_velocity(rightVelocity)
+
+            print("{:4.1f}, {:4.1f}: h={:4.1f} d={:4.1f} a={:4.1f} damper={:4.1f} v1={:4.1f} v2={:4.1f}".format(leftPos, rightPos, h, d, adjustment, damper, leftVelocity, rightVelocity))
+            if (abs(turns) >= turnsNeeded):
+                print("DONE: turns={:4.1f} needed={:4.1f} error={:4.1f}".format(turns, turnsNeeded, turns - turnsNeeded))
+                break
+            wait(10, MSEC)
+
+            # Check timeout
+            if (timeoutSecs > 0 and ((time.time() - startTime) >= timeoutSecs)):
+                print("TIMEOUT!")
+                break
+
+        self.motorLeft.set_velocity(0)
+        self.motorRight.set_velocity(0)
+        self.motorLeft.stop()
+        self.motorRight.stop()
+
     def autoDrive(self, direction, distance, units=DistanceUnits.MM,
                   velocity=100, units_v:VelocityPercentUnits=VelocityUnits.RPM,
                   wait=True, timeoutSecs=100):
