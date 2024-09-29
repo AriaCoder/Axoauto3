@@ -287,7 +287,7 @@ class Bot:
             else:
                 d = h
 
-            if abs(d) > 0.01: # Ignore small changes
+            if abs(d) > 0.1: # Ignore small changes
                 # Don't change velocity by more than 50% on either wheel
                 # Adjust in proportion to delta of the 45 degrees
                 adjustment = (50 * d)/45
@@ -419,9 +419,6 @@ class Bot:
         self.fillScreen(Color.BLUE_VIOLET, Color.WHITE)
         self.print("Extreme")
         self.print("Axolotls!")
-
-        self.calibrate()
-        self.goTurn(30, -90, 5)
         # Wait for someone to select a program to run
 
     def finishCheckpoint(self):
@@ -437,15 +434,16 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult()
-        self.intake.spin(FORWARD, 100, PERCENT)
-        self.goStraight(35, 25, timeoutSecs=2)
+        self.goStraight(40, 20, timeoutSecs=2)
         self.autoTurn(LEFT, 90, DEGREES, 25, PERCENT) # Turns to face goal
-        self.goStraight(-50, 80, timeoutSecs=3) #goes back
+        self.goStraight(-50, 20, timeoutSecs=3) #goes back
+        self.goStraight(-50, 20, timeoutSecs=2)
+        self.startIntake()
         self.goStraight(50, 15, timeoutSecs=2) #collects ball
-        self.goStraight(-100, 20, timeoutSecs=1) #Drives to goal
-        self.autoTurn(LEFT, 15, DEGREES, 50, PERCENT, timeoutSecs=2)#Wiggles in the goal
-        self.goStraight(-100, 40, timeoutSecs=2)
-        self.goStraight(-50, 5, timeoutSecs=1)
+        self.goStraight(-100, 60, timeoutSecs=1) #Drives to goal
+        self.intake.stop(HOLD)
+        #self.autoTurn(LEFT, 15, DEGREES, 50, PERCENT, timeoutSecs=2)#Wiggles in the goal
+        self.goStraight(-100, 40, timeoutSecs=3)
         self.releaseCatapult()
         
         return
