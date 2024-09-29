@@ -31,7 +31,7 @@ class Bot:
         self.motorLeft = Motor(Ports.PORT7,1,True)
         self.motorRight = Motor(Ports.PORT12,1, False)
         self.intakeLeft = Motor(Ports.PORT1,1,True)
-        self.intakeRight = Motor(Ports.PORT1,4)
+        self.intakeRight = Motor(Ports.PORT4)
         self.healthLedLeft = Touchled(Ports.PORT10)
         self.catapultRight = Motor(Ports.PORT11)
         self.catapultLeft = Motor(Ports.PORT3, True)
@@ -72,13 +72,12 @@ class Bot:
 
 
     def startIntake(self):
+        self.intake = MotorGroup(self.intakeLeft,self.intakeRight)
         if self.isCatapultDown:
-            self.intakeLeft.spin(FORWARD, 100, PERCENT)
-            self.intakeRight.spin(FORWARD, 100, PERCENT)
+            self.intake.spin(FORWARD, 100, PERCENT)
         else:
             self.windCatapult()
-            self.intakeLeft.spin(FORWARD, 100, PERCENT)
-            self.intakeRight.spin(FORWARD, 100, PERCENT)
+            self.intake.spin(FORWARD, 100, PERCENT)
 
 
     def setupCatapultBumper(self):
@@ -427,9 +426,9 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult
-        self.intake.spin(FORWARD, 100, PERCENT)
+        self.startIntake()
         self.autoDrive(FORWARD, 250, DistanceUnits.MM, 40, PERCENT, timeoutSecs=2)
-        self.autoTurn(LEFT, 90, DEGREES, , PERCENT) # Turns to face goal
+        self.autoTurn(LEFT, 90, DEGREES, 100, PERCENT) # Turns to face goal
         self.autoDrive(REVERSE, 1800, DistanceUnits.MM, 70, PERCENT, timeoutSecs=2) #goes back
         self.autoDrive(FORWARD, 300, DistanceUnits.MM, 60, PERCENT) #collects ball
         self.autoDrive(REVERSE, 1000, DistanceUnits.MM, 100, PERCENT, timeoutSecs=2) #Drives to goal
