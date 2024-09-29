@@ -235,12 +235,19 @@ class Bot:
                 timeoutSecs: int = 0):
         while True:
             h = self.inertial.heading()
-            goal = angle - h
-            if abs(goal) <= 0.01: # good enough
+            if h > 180:
+                h -= 360   # Convert larger angles to smaller angles by going the other way.
+            error = angle - h  # Can be positive or negative depending on which way.
+            if abs(error) < 0.5:
                 break
-            leftVelocity = velocity - ((goal * 50)/180)
-            rightVelocity = velocity + ((goal * 50)/180)
-            print("{:}")
+            adj = (error * 50) /180 # Capping to 50% - don't turn too much!
+            sign = (error/abs(error))
+            print("h={:4.2f} e={:4.2f} adj={:4.2f}".format(h, error, adj))
+            self.motorLeft.set_velocity(sign*velocity)
+            self.motorRight.set_velocity(-sign*velocity)
+            wait(20, MSEC)
+        self.motorLeft.stop(HOLD)
+        self.motorRight.stop(HOLD)
 
     def goStraight(self,
                    velocity: float,
@@ -411,6 +418,9 @@ class Bot:
         self.fillScreen(Color.BLUE_VIOLET, Color.WHITE)
         self.print("Extreme")
         self.print("Axolotls!")
+
+        self.calibrate()
+        self.goTurn(30, -90, 5)
         # Wait for someone to select a program to run
 
     def finishCheckpoint(self):
@@ -425,6 +435,8 @@ class Bot:
         self.calibrate()
 
     def runNearGoal(self):
+        self.goTurn(30,90)
+        return
         self.windCatapult
         self.startIntake()
         self.autoDrive(FORWARD, 250, DistanceUnits.MM, 40, PERCENT, timeoutSecs=2)
