@@ -250,6 +250,20 @@ class Bot:
         self.motorLeft.stop(HOLD)
         self.motorRight.stop(HOLD)
 
+    def convertHeadingToRotation(self, heading):
+            # Map the 0-365 heading to -45 to 45 degrees range with a step function
+            # The 45-degrees is arbitrary.
+            r = 0
+            if heading > 315:
+                r = heading - 360
+            elif heading > 180:
+                r = -45  # Don't allow angles > 45-deg either way
+            elif heading > 45:
+                r = 45
+            else:
+                r = heading
+            return r
+
     def goStraight(self,
                    velocity: float,
                    distanceIN: float,
@@ -268,25 +282,14 @@ class Bot:
         self.motorRight.set_position(0, RotationUnits.REV)
         self.motorLeft.spin(FORWARD)
         self.motorRight.spin(FORWARD)
-        baseHeading = self.inertial.heading()
+        baseRotation = self.convertHeadingToRotation(self.inertial.heading()) # Where did we start?
         h = 0 
         damper = 1.0
 
         startTime = time.time()
         while True:
-            h = self.inertial.heading() - baseHeading
-            # Heading is 0-359.99 degrees.
-            # Map the delta to -45 to 45 degrees with a step function
-            # That 45-degrees is arbitrary.
-            if h > 315:
-                d = h - 360
-            elif h > 180:
-                d = -45  # Don't allow angles > 45-deg either way
-            elif h > 45:
-                d = 45
-            else:
-                d = h
-
+            i = self.convertHeadingToRotation(self.inertial.heading())
+            d = i - baseRotation
             if abs(d) > 0.1: # Ignore small changes
                 # Don't change velocity by more than 50% on either wheel
                 # Adjust in proportion to delta of the 45 degrees
@@ -434,13 +437,12 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult()
-        self.goStraight(40, 20, timeoutSecs=2)
-        self.autoTurn(LEFT, 90, DEGREES, 25, PERCENT) # Turns to face goal
+        self.goStraight(50, 20, timeoutSecs=2)
+        self.autoTurn(LEFT, 90, DEGREES, 50, PERCENT) # Turns to face goal
         self.goStraight(-50, 20, timeoutSecs=3) #goes back
-        self.goStraight(-50, 20, timeoutSecs=2)
         self.startIntake()
         self.goStraight(50, 15, timeoutSecs=2) #collects ball
-        self.goStraight(-100, 60, timeoutSecs=1) #Drives to goal
+        self.goStraight(-60, 60, timeoutSecs=1) #Drives to goal
         self.intake.stop(HOLD)
         #self.autoTurn(LEFT, 15, DEGREES, 50, PERCENT, timeoutSecs=2)#Wiggles in the goal
         self.goStraight(-100, 40, timeoutSecs=3)
