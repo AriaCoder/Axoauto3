@@ -266,14 +266,14 @@ class Bot:
 
     def goStraight(self,
                    velocity: float,
-                   distanceIN: float,
+                   inches: float,
                    timeoutSecs: int = 0,
                    wheelDiameterMM: int = 200,
                    driveGearRatio: float = 0.5):
         taperTurns = 0.75     # Turns remaining on wheels before start tapering
         convertINtoMM = 25.4
         wheelDiameterMM = 200
-        distanceMM = distanceIN * convertINtoMM
+        distanceMM = inches * convertINtoMM
         turnsNeeded = (distanceMM / wheelDiameterMM) * driveGearRatio
 
         self.motorLeft.set_velocity(velocity, PERCENT)
