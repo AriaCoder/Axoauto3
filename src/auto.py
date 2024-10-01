@@ -106,8 +106,8 @@ class Bot:
 
     def releaseCatapult(self): # Down Button
         if self.isCatapultDown:
-            self.catapultLeft.spin_for(FORWARD, 360, DEGREES)
-            self.catapultRight.spin_for(FORWARD, 360, DEGREES)
+            self.catapultLeft.spin_for(FORWARD, 180, DEGREES, wait = False)
+            self.catapultRight.spin_for(FORWARD, 180, DEGREES)
             self.isCatapultDown()
             self.windCatapult()
 
@@ -437,15 +437,16 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult()
-        self.goStraight(50, 20, timeoutSecs=2)
-        self.autoTurn(LEFT, 90, DEGREES, 50, PERCENT) # Turns to face goal
-        self.goStraight(-50, 20, timeoutSecs=3) #goes back
+        self.goStraight(48, 20, timeoutSecs=2)
+        self.autoTurn(LEFT, 90, DEGREES, 25, PERCENT) # Turns to face goal
+        self.goStraight(-60, 20, timeoutSecs=2) #goes back
+        self.goStraight(-60, 20, timeoutSecs=2)
         self.startIntake()
         self.goStraight(50, 15, timeoutSecs=2) #collects ball
         self.goStraight(-60, 60, timeoutSecs=1) #Drives to goal
         self.intake.stop(HOLD)
         #self.autoTurn(LEFT, 15, DEGREES, 50, PERCENT, timeoutSecs=2)#Wiggles in the goal
-        self.goStraight(-100, 40, timeoutSecs=3)
+        self.goStraight(-100, 40, timeoutSecs=2)
         self.releaseCatapult()
         
         return
