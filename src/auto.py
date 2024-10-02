@@ -73,13 +73,14 @@ class Bot:
 
 
     def startIntake(self):
-        self.intake = MotorGroup(self.intakeLeft,self.intakeRight)
-        if self.isCatapultDown:
-            self.intake.spin(FORWARD, 100, PERCENT)
-        else:
+        if not self.intake:
+            self.intake = MotorGroup(self.intakeLeft, self.intakeRight)
+        if not self.isCatapultDown():
             self.windCatapult()
-            self.intake.spin(FORWARD, 100, PERCENT)
+        self.intake.spin(FORWARD, 100, PERCENT)
 
+    def stopIntake(self):
+        self.intake.stop()
 
     def setupCatapultBumper(self):
         pass
@@ -234,21 +235,47 @@ class Bot:
                 velocity: float,
                 angle: float,
                 timeoutSecs: int = 0):
+        # Angle is absolute, relative to the calibrated heading of 0-deg 
         while True:
             h = self.inertial.heading()
             if h > 180:
                 h -= 360   # Convert larger angles to smaller angles by going the other way.
             error = angle - h  # Can be positive or negative depending on which way.
-            if abs(error) < 0.5:
+            if abs(error) < 0.1:
+                print("All done. h={:4.2f}".format(h))
+                self.brain.play_sound(SoundType.FILLUP)
                 break
-            adj = (error * 50) /180 # Capping to 50% - don't turn too much!
-            sign = (error/abs(error))
-            print("h={:4.2f} e={:4.2f} adj={:4.2f}".format(h, error, adj))
-            self.motorLeft.set_velocity(sign*velocity)
-            self.motorRight.set_velocity(-sign*velocity)
-            wait(20, MSEC)
+            
+            # Taper the final 20-degrees linearly (each wheel halves the v)
+            turnVelocity = velocity/2
+            if abs(error) <= 30:
+                print("TAPERING! error={:4.2f}".format(error))
+                turnVelocity = ((error/30) * velocity)/2
+            # When velocity is TOO slow, the bot won't move
+            if abs(turnVelocity) < 8:
+                turnVelocity = 8 if turnVelocity > 0 else -8
+            print("h={:4.2f} e={:4.2f} adj={:4.2f}".format(h, error, turnVelocity))
+            
+            if angle < 0:
+                self.motorLeft.set_velocity(-turnVelocity)
+                self.motorRight.set_velocity(turnVelocity)
+            else:
+                self.motorLeft.set_velocity(turnVelocity)
+                self.motorRight.set_velocity(-turnVelocity)
+
+            wait(10, MSEC)
         self.motorLeft.stop(HOLD)
         self.motorRight.stop(HOLD)
+
+        # Debugging
+        n = 0
+        while True:
+            d = self.inertial.heading()
+            print("Headig: {:4.2f}".format(d))
+            wait(1, SECONDS)
+            n += 1
+            if n > 10:
+                break
 
     def convertHeadingToRotation(self, heading):
             # Map the 0-365 heading to -45 to 45 degrees range with a step function
@@ -422,6 +449,9 @@ class Bot:
         self.fillScreen(Color.BLUE_VIOLET, Color.WHITE)
         self.print("Extreme")
         self.print("Axolotls!")
+
+        # self.calibrate()
+        # self.goTurn(50, 90, 4)
         # Wait for someone to select a program to run
 
     def finishCheckpoint(self):
@@ -438,7 +468,9 @@ class Bot:
     def runNearGoal(self):
         self.windCatapult()
         self.goStraight(48, 20, timeoutSecs=2)
+
         self.autoTurn(LEFT, 90, DEGREES, 25, PERCENT) # Turns to face goal
+
         self.goStraight(-60, 20, timeoutSecs=2) #goes back
         self.goStraight(-60, 20, timeoutSecs=2)
         self.startIntake()
