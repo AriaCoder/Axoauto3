@@ -445,26 +445,23 @@ class Bot:
         self.goStraight(50, 15, timeoutSecs=2) #collects ball
         self.goStraight(-60, 60, timeoutSecs=1) #Drives to goal
         self.intake.stop(HOLD)
-        #self.autoTurn(LEFT, 15, DEGREES, 50, PERCENT, timeoutSecs=2)#Wiggles in the goal
         self.goStraight(-100, 40, timeoutSecs=2)
         self.releaseCatapult()
-        
-        return
-        self.autoDrive(REVERSE, 35, INCHES, 100, PERCENT, wait=True, timeoutSecs=2)
-        self.releaseCatapult()
-        self.autoDrive(FORWARD, 25, INCHES, 100, PERCENT, wait=True)  # Return home
-        self.autoDrive( REVERSE, 8, INCHES, 100, PERCENT)
-        self.catapultLeft.spin(FORWARD, 100, PERCENT)
-        self.catapultRight.spin(FORWARD, 100, PERCENT)
-
 
     def runFarGoal(self):
-        self.brain.screen.print("wrong goal!")
+        self.windCatapult()
         self.startIntake()
-        self.autoDrive(FORWARD, 360, MM, 45, PERCENT)
-        self.autoTurn(LEFT, 2, DEGREES, 100, PERCENT, timeoutSecs=2)
-        self.autoDrive(REVERSE, 260, MM, 35, PERCENT)
-    
+        self.goStraight(48, 28, timeoutSecs=2)
+        self.goStraight(48, 27, timeoutSecs=2)
+        self.autoTurn(LEFT, 85, DEGREES, 23, PERCENT) # Turns to face goal
+        self.intake.stop(HOLD)
+        self.goStraight(-60, 20, timeoutSecs=2) #goes back
+        self.goStraight(-60, 20, timeoutSecs=2)
+        self.goStraight(-60, 60, timeoutSecs=2) #Drives to goal
+        self.intake.stop(HOLD)
+        self.goStraight(-100, 40, timeoutSecs=2)
+        self.releaseCatapult()
+
     def runRepeat(self):
         #self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
