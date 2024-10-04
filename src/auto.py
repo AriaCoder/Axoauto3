@@ -231,6 +231,24 @@ class Bot:
             self.brain.play_sound(SoundType.POWER_DOWN)
             return False
 
+    # Use negativ4 velocity to go the opposite way
+    def goTurn90(self, velocityPercent: float, timeoutSecs: float = 0.0):
+        leftDir = REVERSE if velocityPercent > 0 else FORWARD
+        rightDir = FORWARD if velocityPercent > 0 else REVERSE
+        self.motorLeft.set_velocity(abs(velocityPercent), PERCENT)
+        self.motorRight.set_velocity(abs(velocityPercent), PERCENT)
+        self.motorLeft.set_max_torque(100, PERCENT)
+        self.motorRight.set_max_torque(100, PERCENT)
+        if timeoutSecs > 0.0:
+            self.motorLeft.set_timeout(timeoutSecs, SECONDS)
+            self.motorRight.set_timeout(timeoutSecs, SECONDS)
+        self.motorLeft.spin_for(leftDir,0.44, TURNS, wait=False)
+        self.motorRight.spin_for(rightDir, 0.44, TURNS, wait=True)
+        self.motorLeft.stop(BRAKE)
+        self.motorRight.stop(BRAKE)
+        self.brain.play_sound(SoundType.TADA)
+        print("{:4.2f}".format(self.inertial.heading()))
+
     def goTurn(self,
                 velocity: float,
                 angle: float,
@@ -450,8 +468,10 @@ class Bot:
         self.print("Extreme")
         self.print("Axolotls!")
 
-        # self.calibrate()
-        # self.goTurn(50, 90, 4)
+        # Testing goTurn90()
+        # if self.calibrate():
+        #   self.goTurn90(-50, 3)
+        
         # Wait for someone to select a program to run
 
     def finishCheckpoint(self):
@@ -468,9 +488,7 @@ class Bot:
     def runNearGoal(self):
         self.windCatapult()
         self.goStraight(48, 20, timeoutSecs=2)
-
-        self.autoTurn(LEFT, 90, DEGREES, 25, PERCENT) # Turns to face goal
-
+        self.goTurn90(45, 3) # Turns to face goal
         self.goStraight(-60, 20, timeoutSecs=2) #goes back
         self.goStraight(-60, 20, timeoutSecs=2)
         self.startIntake()
