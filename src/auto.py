@@ -11,6 +11,7 @@ class Bot:
 
     def __init__(self):
         self.isAutoRunning = False
+        self.cancelGoStraight = False
         self.modeNumber = -1
         self.isCalibrated = False
         self.cancelCalibration = False
@@ -22,6 +23,7 @@ class Bot:
         self.inertial = Inertial()
         self.setupPortMappings()
         self.setupDrive()
+        self.setupIntake()
         self.setupCatapult()
         self.setupSelector()
         self.setupCatapultBumper()
@@ -42,7 +44,7 @@ class Bot:
         self.driveTrain = None  # Default is MANUAL mode, no driveTrain
 
     def onCatapultBumperPressed(self):
-        self.releaseCatapult()
+        self.cancelGoStraight = True
 
     def setupHealthled(self):
         color = Color.RED
@@ -71,10 +73,10 @@ class Bot:
         #    f()  # You're allowed to "run" a function variable
         #    self.print("Done")
 
+    def setupIntake(self):
+        self.intake = MotorGroup(self.intakeLeft, self.intakeRight)
 
     def startIntake(self):
-        if not self.intake:
-            self.intake = MotorGroup(self.intakeLeft, self.intakeRight)
         if not self.isCatapultDown():
             self.windCatapult()
         self.intake.spin(FORWARD, 100, PERCENT)
@@ -83,7 +85,7 @@ class Bot:
         self.intake.stop()
 
     def setupCatapultBumper(self):
-        pass
+        self.catapultBumper.pressed(self.onCatapultBumperPressed)
 
     def setupCatapult(self):
         self.catapultLeft.set_velocity(100, PERCENT)
@@ -295,24 +297,17 @@ class Bot:
             if n > 10:
                 break
 
-    def convertHeadingToRotation(self, heading):
-            # Map the 0-365 heading to -45 to 45 degrees range with a step function
-            # The 45-degrees is arbitrary.
-            r = 0
-            if heading > 315:
-                r = heading - 360
-            elif heading > 180:
-                r = -45  # Don't allow angles > 45-deg either way
-            elif heading > 45:
-                r = 45
-            else:
-                r = heading
-            return r
+    def convertHeadingToYaw(self, heading):
+            y = heading
+            if heading > 180:
+                y = heading - 360
+            return y
 
     def goStraight(self,
-                   velocity: float,
                    inches: float,
+                   velocity: float,
                    timeoutSecs: int = 0,
+                   requiredYaw: float = 360, # Default of 360 means ignore
                    wheelDiameterMM: int = 200,
                    driveGearRatio: float = 0.5):
         taperTurns = 0.75     # Turns remaining on wheels before start tapering
@@ -327,18 +322,23 @@ class Bot:
         self.motorRight.set_position(0, RotationUnits.REV)
         self.motorLeft.spin(FORWARD)
         self.motorRight.spin(FORWARD)
-        baseRotation = self.convertHeadingToRotation(self.inertial.heading()) # Where did we start?
+        # Force the robot to get to a certain angle heading
+        if abs(requiredYaw) <= 180:
+            baseYaw = requiredYaw
+        else:
+            baseYaw = self.convertHeadingToYaw(self.inertial.heading()) # Where did we start?
         h = 0 
         damper = 1.0
 
+        print("***********************")
         startTime = time.time()
-        while True:
-            i = self.convertHeadingToRotation(self.inertial.heading())
-            d = i - baseRotation
+        while not self.cancelGoStraight:
+            i = self.convertHeadingToYaw(self.inertial.heading())
+            d = i - baseYaw
             if abs(d) > 0.1: # Ignore small changes
                 # Don't change velocity by more than 50% on either wheel
                 # Adjust in proportion to delta of the 45 degrees
-                adjustment = (50 * d)/45
+                adjustment = (50 * d)/90
             else:
                 adjustment = 0
 
@@ -377,6 +377,7 @@ class Bot:
 
             # Check timeout
             if (timeoutSecs > 0 and ((time.time() - startTime) >= timeoutSecs)):
+                self.brain.play_sound(SoundType.DOOR_CLOSE)
                 print("TIMEOUT!")
                 break
 
@@ -384,17 +385,9 @@ class Bot:
         self.motorRight.set_velocity(0)
         self.motorLeft.stop()
         self.motorRight.stop()
-
-    def autoDrive(self, direction, distance, units=DistanceUnits.MM,
-                  velocity=100, units_v:VelocityPercentUnits=VelocityUnits.RPM,
-                  wait=True, timeoutSecs=100):
-        if self.driveTrain is not None:
-            if timeoutSecs != 100:
-                self.driveTrain.set_timeout(timeoutSecs, TimeUnits.SECONDS)
-            self.driveTrain.drive_for(direction, distance, units, velocity, units_v, wait)
-            if timeoutSecs != 100:  # Restore timeout for future driveTrain users
-                self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
-
+        if self.cancelGoStraight:
+            print("CANCELLED")
+        self.cancelGoStraight = False  # Reset this
 
     def autoTurn(self, direction, angle, units=RotationUnits.DEG,
                  velocity=50, units_v:VelocityPercentUnits=VelocityUnits.PERCENT, wait=True,
@@ -405,62 +398,6 @@ class Bot:
             self.driveTrain.turn_for(direction, angle / 2, units, velocity, units_v, wait)
             if timeoutSecs != 100:  # Restore timeout for future driveTrain users
                 self.driveTrain.set_timeout(100, TimeUnits.SECONDS)
-
-   # def autoHdrive(self, direction, distance, units=DistanceUnits.MM, velocity=100,
-    #               units_v:VelocityPercentUnits=VelocityUnits.RPM, wait=True, timeoutSecs=100):
-     #    if self.wheelCenter is not None:
-      #      if not self.isCalibrated:
-       #         self.calibrate()
-       #     if timeoutSecs != 100:
-        #        self.wheelCenter.set_timeout(timeoutSecs, TimeUnits.SECONDS)
-        #    # Calculate spins
-         #   spins = distance/2/200
-         #   if units == DistanceUnits.MM:
-         #       gearRatio = 2
-          #      #wheelDiameterMM = 63.5
-          #     spins = (distance/gearRatio)/200
-
-              #  self.brain.play_sound(SoundType.TADA)
-               # self.brain.screen.clear_screen()
-               # self.print(spins)
-
-                #self.wheelCenter.spin_for(direction, spins, TURNS, velocity, units_v, wait)
-            #if timeoutSecs != 100:  # Restore timeout for future driveTrain users
-            #    self.wheelCenter.set_timeout(100, TimeUnits.SECONDS)
-
-    def autoArc(self, headingTarget: float, leftVelocityPercent: int, rightVelocityPercent: int, timeoutSecs=100):
-        if timeoutSecs != 100:
-            self.motorLeft.set_timeout(timeoutSecs)
-            self.motorRight.set_timeout(timeoutSecs)
-        self.motorLeft.spin(FORWARD, leftVelocityPercent, PERCENT)
-        self.motorRight.spin(FORWARD, rightVelocityPercent, PERCENT)
-        
-        # TODO: Bail out based on timeout
-        lastHeading = 0
-        sameHeadings = 0
-        while True:  # Wait to complete to arc
-            heading = self.inertial.heading()
-            print(heading)
-            error = 5
-            if (heading > (headingTarget - error) and heading < (headingTarget + error)):
-                break
-            if heading == lastHeading:
-                sameHeadings += 1
-            else:
-                sameHeadings = 0
-            if sameHeadings > 5:  # Stuck 
-                break
-            lastHeading = heading
-            sleep(100, MSEC)
-
-        self.motorLeft.stop(COAST)
-        self.motorRight.stop(COAST)
-
-        if timeoutSecs != 100:  # Restore old value?
-            self.motorLeft.set_timeout(100)
-            self.motorRight.set_timeout(100)
-        
-    # TODO: Add a parameter for green vs. purple blocks?
    
     def run(self):
         self.setup()
@@ -469,7 +406,8 @@ class Bot:
         self.print("Axolotls!")
 
         # Testing goTurn90()
-        # if self.calibrate():
+        if self.calibrate():
+            self.runNearGoal()
         #   self.goTurn90(-50, 3)
         
         # Wait for someone to select a program to run
@@ -487,29 +425,27 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult()
-        self.goStraight(48, 20, timeoutSecs=2)
-        self.goTurn90(45, 3) # Turns to face goal
-        self.goStraight(-60, 20, timeoutSecs=2) #goes back
-        self.goStraight(-60, 20, timeoutSecs=2)
+        self.goStraight(18, 40, timeoutSecs=5)
+        self.goTurn90(40, 4) # Turns to face goal
+        self.goStraight(20, -60, timeoutSecs=5, requiredYaw=-90) # go back
         self.startIntake()
-        self.goStraight(50, 15, timeoutSecs=2) #collects ball
-        self.goStraight(-60, 60, timeoutSecs=1) #Drives to goal
-        self.intake.stop(HOLD)
-        self.goStraight(-100, 40, timeoutSecs=2)
+        self.goStraight(20, 50, timeoutSecs=4) #collects ball
+        self.goStraight(50, -60, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.intake.stop(COAST)
         self.releaseCatapult()
 
     def runFarGoal(self):
         self.windCatapult()
         self.startIntake()
-        self.goStraight(48, 28, timeoutSecs=2)
-        self.goStraight(48, 27, timeoutSecs=2)
-        self.autoTurn(LEFT, 85, DEGREES, 23, PERCENT) # Turns to face goal
+        self.goStraight(28, 48, timeoutSecs=2)
+        self.goStraight(27, 48, timeoutSecs=2)
+        self.goTurn90(45, 3) # Turns to face goal
         self.intake.stop(HOLD)
-        self.goStraight(-60, 20, timeoutSecs=2) #goes back
-        self.goStraight(-60, 20, timeoutSecs=2)
-        self.goStraight(-60, 60, timeoutSecs=2) #Drives to goal
+        self.goStraight(20, -60, timeoutSecs=2) #goes back
+        self.goStraight(20, -60, timeoutSecs=2)
+        self.goStraight(20, -60, timeoutSecs=2) #Drives to goal
         self.intake.stop(HOLD)
-        self.goStraight(-100, 40, timeoutSecs=2)
+        self.goStraight(40, -100, timeoutSecs=2)
         self.releaseCatapult()
 
     def runRepeat(self):
