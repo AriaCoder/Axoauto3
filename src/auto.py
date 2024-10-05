@@ -99,8 +99,7 @@ class Bot:
         while not self.isCatapultDown():
             self.catapultRight.spin(FORWARD)
             self.catapultLeft.spin(FORWARD)
-            wait(200, MSEC)
- 
+            wait(10, MSEC)
         self.catapultRight.stop(HOLD)
         self.catapultLeft.stop(HOLD)
 
@@ -404,11 +403,6 @@ class Bot:
         self.fillScreen(Color.BLUE_VIOLET, Color.WHITE)
         self.print("Extreme")
         self.print("Axolotls!")
-
-        # Testing goTurn90()
-        if self.calibrate():
-            self.runNearGoal()
-        #   self.goTurn90(-50, 3)
         
         # Wait for someone to select a program to run
 
@@ -425,14 +419,32 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult()
-        self.goStraight(18, 40, timeoutSecs=5)
+        self.goStraight(12.75, 50, timeoutSecs=5)
         self.goTurn90(40, 4) # Turns to face goal
-        self.goStraight(20, -60, timeoutSecs=5, requiredYaw=-90) # go back
+        self.goStraight(40, -60, timeoutSecs=5, requiredYaw=-90) # go back
         self.startIntake()
-        self.goStraight(20, 50, timeoutSecs=4) #collects ball
-        self.goStraight(50, -60, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.goStraight(20, 55, timeoutSecs=4) #collects ball
+        self.goStraight(30, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
         self.intake.stop(COAST)
+        wait(1000,MSEC)
         self.releaseCatapult()
+        wait(100,MSEC)
+        self.releaseCatapult()
+        self.windCatapult()
+        self.startIntake()
+        self.windCatapult()
+        self.goStraight(30,100,timeoutSecs=1)
+        self.goStraight(50, 60, timeoutSecs=3, requiredYaw=-90) #Away from goal
+        self.goTurn90(-40,3)
+        self.goStraight(65,60,timeoutSecs=2,requiredYaw=0)
+        self.goTurn90(40, 4) # Turns to face goal
+        self.goStraight(60, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.releaseCatapult()
+        wait(100,MSEC)
+        self.releaseCatapult()
+        self.windCatapult()
+        self.stopAll()
+        
 
     def runFarGoal(self):
         self.windCatapult()
@@ -447,8 +459,10 @@ class Bot:
         self.intake.stop(HOLD)
         self.goStraight(40, -100, timeoutSecs=2)
         self.releaseCatapult()
+        self.goStraight(2, -100, timeoutSecs=1)
 
     def runRepeat(self):
+        return
         #self.intake.spin(REVERSE, 100, PERCENT)
         self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
         self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
