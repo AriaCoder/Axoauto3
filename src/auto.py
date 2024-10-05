@@ -100,6 +100,9 @@ class Bot:
             self.catapultRight.spin(FORWARD)
             self.catapultLeft.spin(FORWARD)
             wait(10, MSEC)
+        # Spinning the catapult a little more because sensor placement can't go lower
+      #  self.catapultRight.spin_for(FORWARD, 60, DEGREES, wait = False)
+    #    self.catapultLeft.spin_for(FORWARD, 60, DEGREES)
         self.catapultRight.stop(HOLD)
         self.catapultLeft.stop(HOLD)
 
@@ -444,7 +447,8 @@ class Bot:
         self.releaseCatapult()
         self.windCatapult()
         self.stopAll()
-        
+        self.goStraight(30, -100, timeoutSecs=2, requiredYaw=-90) # A little last push
+        self.stopAll()
 
     def runFarGoal(self):
         self.windCatapult()
