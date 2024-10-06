@@ -422,12 +422,12 @@ class Bot:
 
     def runNearGoal(self):
         self.windCatapult()
-        self.goStraight(12.75, 50, timeoutSecs=5)
-        self.goTurn90(40, 4) # Turns to face goal
-        self.goStraight(40, -60, timeoutSecs=5, requiredYaw=-90) # go back
+        self.goStraight(12.75, 30, timeoutSecs=5,requiredYaw=0)
+        self.goTurn90(30, 4) # Turns to face goal
+        self.goStraight(40, -40, timeoutSecs=5, requiredYaw=-90) # go back
         self.startIntake()
-        self.goStraight(20, 55, timeoutSecs=4) #collects ball
-        self.goStraight(30, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.goStraight(20, 40, timeoutSecs=3, requiredYaw=-90) #collects ball
+        self.goStraight(30, -60, timeoutSecs=5, requiredYaw=-90) #Drives to goal
         self.intake.stop(COAST)
         wait(1000,MSEC)
         self.releaseCatapult()
@@ -436,12 +436,12 @@ class Bot:
         self.windCatapult()
         self.startIntake()
         self.windCatapult()
-        self.goStraight(30,100,timeoutSecs=1)
-        self.goStraight(50, 60, timeoutSecs=3, requiredYaw=-90) #Away from goal
-        self.goTurn90(-40,3)
-        self.goStraight(65,60,timeoutSecs=2,requiredYaw=0)
+        self.goStraight(30,60,timeoutSecs=1, requiredYaw=-90)
+        self.goStraight(30, 60, timeoutSecs=3, requiredYaw=-90) #Away from goal
+        self.goTurn90(-30,3)
+        self.goStraight(47,60,timeoutSecs=2,requiredYaw=0)
         self.goTurn90(40, 4) # Turns to face goal
-        self.goStraight(60, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.goStraight(50, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
         self.releaseCatapult()
         wait(100,MSEC)
         self.releaseCatapult()
@@ -455,13 +455,12 @@ class Bot:
         self.startIntake()
         self.goStraight(28, 48, timeoutSecs=2)
         self.goStraight(27, 48, timeoutSecs=2)
-        self.goTurn90(45, 3) # Turns to face goal
+        self.goTurn90(30, 3) # Turns to face goal
         self.intake.stop(HOLD)
-        self.goStraight(20, -60, timeoutSecs=2) #goes back
-        self.goStraight(20, -60, timeoutSecs=2)
-        self.goStraight(20, -60, timeoutSecs=2) #Drives to goal
+        self.goStraight(20, -40, timeoutSecs=2) #goes back
+        self.goStraight(20, -40, timeoutSecs=2) #Drives to goal
         self.intake.stop(HOLD)
-        self.goStraight(40, -100, timeoutSecs=2)
+        self.goStraight(40, -80, timeoutSecs=2)
         self.releaseCatapult()
         self.goStraight(2, -100, timeoutSecs=1)
 
