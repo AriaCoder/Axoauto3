@@ -5,7 +5,7 @@ import time
 
 
 class Bot:
-    MODES = ["CALIBRATE", "NEAR_GOAL", "FAR_GOAL", "REPEAT"]
+    MODES = ["CALIBRATE", "4SWITCHES", "NEAR_GOAL", "REPEAT"]
     MODE_COLORS = [Color.CYAN, Color.YELLOW_GREEN, Color.BLUE, Color.VIOLET]
     MODE_PEN_COLORS = [Color.BLACK, Color.BLACK, Color.WHITE, Color. WHITE]
 
@@ -134,9 +134,9 @@ class Bot:
             if self.modeNumber == 0:
                 self.runCalibrate()
             elif self.modeNumber == 1:
-                self.runNearGoal()
+                self.run4Switches()
             elif self.modeNumber == 2:
-                self.runFarGoal()
+                self.runNearGoal()
             elif self.modeNumber == 3:
                 self.runRepeat()
             self.isAutoRunning = False
@@ -420,7 +420,7 @@ class Bot:
        # self.windCatapult()
         self.calibrate()
 
-    def runNearGoal(self):
+    def run4Switches(self):
         self.windCatapult()
         self.goStraight(12.75, 30, timeoutSecs=5,requiredYaw=0)
         self.goTurn90(30, 4) # Turns to face goal
@@ -438,7 +438,7 @@ class Bot:
         self.windCatapult()
         self.goStraight(30,60,timeoutSecs=1, requiredYaw=-90)
         self.goStraight(30, 60, timeoutSecs=3, requiredYaw=-90) #Away from goal
-        self.goTurn90(-30,3)
+        self.goTurn90(-30,4)
         self.goStraight(47,60,timeoutSecs=2,requiredYaw=0)
         self.goTurn90(40, 4) # Turns to face goal
         self.goStraight(50, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
@@ -450,20 +450,21 @@ class Bot:
         self.goStraight(30, -100, timeoutSecs=2, requiredYaw=-90) # A little last push
         self.stopAll()
 
-    def runFarGoal(self):
+    def runNearGoal(self):
         self.windCatapult()
+        self.goStraight(12.75, 30, timeoutSecs=5,requiredYaw=0)
+        self.goTurn90(30, 4) # Turns to face goal
+        self.goStraight(40, -40, timeoutSecs=5, requiredYaw=-90) # go back
         self.startIntake()
-        self.goStraight(28, 48, timeoutSecs=2)
-        self.goStraight(27, 48, timeoutSecs=2)
-        self.goTurn90(30, 3) # Turns to face goal
-        self.intake.stop(HOLD)
-        self.goStraight(20, -40, timeoutSecs=2) #goes back
-        self.goStraight(20, -40, timeoutSecs=2) #Drives to goal
-        self.intake.stop(HOLD)
-        self.goStraight(40, -80, timeoutSecs=2)
+        self.goStraight(20, 40, timeoutSecs=3, requiredYaw=-90) #collects ball
+        self.goStraight(30, -60, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.intake.stop(COAST)
+        wait(1000,MSEC)
         self.releaseCatapult()
-        self.goStraight(2, -100, timeoutSecs=1)
-
+        wait(100,MSEC)
+        self.releaseCatapult()
+        self.windCatapult()
+        
     def runRepeat(self):
         return
         #self.intake.spin(REVERSE, 100, PERCENT)
