@@ -420,6 +420,18 @@ class Bot:
        # self.windCatapult()
         self.calibrate()
 
+    def autoLoop(self):
+        self.startIntake()
+        self.goStraight(55, 65, timeoutSecs=5, requiredYaw=-90)
+        self.goStraight(60, -65, timeoutSecs=5, requiredYaw=-90)
+        self.goStraight(10, -15, timeoutSecs=5, requiredYaw=-90)
+        self.intake.stop(COAST)
+        wait(100, MSEC)
+        self.releaseCatapult()
+        wait(100, MSEC)
+        self.releaseCatapult()
+        self.windCatapult()
+
     def run4Switches(self):
         self.windCatapult()
         self.goStraight(10, 30, timeoutSecs=5,requiredYaw=0)
@@ -464,33 +476,10 @@ class Bot:
         wait(100,MSEC)
         self.releaseCatapult()
         self.windCatapult()
-        self.startIntake()
-        self.goStraight(55, 50, timeoutSecs=5, requiredYaw=-90)
-        self.goStraight(60, -60, timeoutSecs=5, requiredYaw=-90)
-        self.intake.stop(COAST)
-        wait(1000, MSEC)
-        self.releaseCatapult()
-        self.windCatapult()
-        self.startIntake()
-        self.goStraight(55, 50, timeoutSecs=5, requiredYaw=-90)
-        self.goStraight(60, -60, timeoutSecs=5, requiredYaw=-90)
-        self.intake.stop(COAST)
-        wait(1000, MSEC)
-        self.releaseCatapult()
-        self.windCatapult()
+        for i in range(5):
+          self.autoLoop()
         
-    def runRepeat(self):
-        return
-        #self.intake.spin(REVERSE, 100, PERCENT)
-        self.autoDrive(FORWARD, 350, MM, 25,PERCENT)
-        self.autoDrive(REVERSE, 350, MM, 50, PERCENT)
-        self.autoTurn(LEFT, 52, DEGREES, 100 , PERCENT)
-        self.autoDrive(REVERSE, 350, MM, 100, PERCENT, timeoutSecs=3)
-        self.stopAll()
-       
-
-
-        
+   
 # Where it all begins!    
 bot = Bot()
 bot.run()
