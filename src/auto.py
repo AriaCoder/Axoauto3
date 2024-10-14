@@ -466,12 +466,12 @@ class Bot:
         self.windCatapult()
         self.startIntake()
         self.goStraight(10, 40, timeoutSecs=5,requiredYaw=0)
-        self.goTurn90(20, 4) # Turns to face goal
-        self.intake.stop(COAST)
-        self.goStraight(40, -70, timeoutSecs=4, requiredYaw=-90) # go back
+        self.goTurn90(25, 4) # Turns to face goal
+        self.goStraight(40, -50, timeoutSecs=4, requiredYaw=-90) # go back
         #self.goStraight(20, 40, timeoutSecs=3, requiredYaw=-90) #collects ball
-        self.goStraight(35, -70, timeoutSecs=5, requiredYaw=-90) #Drives to goal
-        wait(100,MSEC)
+        self.goStraight(35, -50, timeoutSecs=5, requiredYaw=-90) #Drives to goal
+        self.intake.stop(COAST)
+        wait(1000,MSEC)
         self.releaseCatapult()
         wait(100,MSEC)
         self.releaseCatapult()
