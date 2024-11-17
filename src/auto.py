@@ -170,7 +170,6 @@ class Bot:
         self.brain.screen.set_cursor(1, 1)
         
     def print(self, message):
-        penColor = Bot.MODE_PEN_COLORS[self.modeNumber]
         self.brain.screen.set_fill_color(self.screenColor)
         self.brain.screen.set_pen_color(self.penColor)
         self.brain.screen.print(message)
