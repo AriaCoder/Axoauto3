@@ -13,6 +13,39 @@ from vex import *
 # The Eye class is useful for us
 # Represents a Distance sensor that broadcasts if it "sees" an object
 
+# The Eye class is useful for us
+# Represents a Distance sensor that broadcasts if it "sees" an object
+class Eye:
+    def __init__(self, portNumber: int, distanceThreshold: int, units: DistanceUnits.DistanceUnits = DistanceUnits.MM):
+        self.sensor = Distance(portNumber)
+        self.distanceThreshold: int = distanceThreshold
+        self.units = units
+        self.seen: bool = False  # Variables keep us from broadcast()-ing repeatedly
+        self.lost: bool = False
+        self.eventSeen = None
+        self.eventLost = None
+
+    def setCallbacks(self, callbackSeen, callbackLost):
+        self.eventSeen = Event(callbackSeen)
+        self.eventLost = Event(callbackLost)
+
+    def isObjectVisible(self) -> bool:
+        return True if self.sensor.object_distance(self.units) <= self.distanceThreshold else False
+    
+    def look(self) -> bool:
+        if self.sensor.installed():
+            if self.isObjectVisible():
+                if not self.seen:
+                    self.seen = True
+                    self.lost = False
+                    if self.eventSeen: self.eventSeen.broadcast()
+                    return True
+            else:
+                if not self.lost:
+                    self.seen = False
+                    self.lost = True
+                    if self.eventLost: self.eventLost.broadcast()
+        return False
 
 # Setup
 brain = Brain()
@@ -277,7 +310,19 @@ def setupSelector():
     brain.buttonLeft.pressed(onBrainButtonLeft)
     brain.buttonCheck.pressed(onBrainButtonCheck)
 
+isAutoRunning = False
+isCalibrated = False
+modeNumber = 0
+cancelCalibration = False
+
+def runRepeat():
+    pass
+
 def onBrainButtonCheck():
+    global isAutoRunning
+    global isCalibrated
+    global modeNumber
+
     if isAutoRunning:
         print("Already running")
     elif not isCalibrated and modeNumber > 0:  # Red block has no calibration
@@ -305,14 +350,15 @@ def onBrainButtonLeft():
     applyMode(modeNumber - 1)
 
 def applyMode( newMode):
+    global cancelCalibration
     if inertial.is_calibrating():
         cancelCalibration = False
     if isAutoRunning:
         print("Running auto already")
     else:
-        modeNumber = newMode % len(Bot.MODES)
-        fillScreen(Bot.MODE_COLORS[modeNumber], Bot.MODE_PEN_COLORS[modeNumber])
-        print(Bot.MODES[modeNumber])
+        modeNumber = newMode % len(MODES)
+        fillScreen(MODE_COLORS[modeNumber], MODE_PEN_COLORS[modeNumber])
+        print(MODES[modeNumber])
 
 def fillScreen(screenColor, penColor):
     screenColor = screenColor
