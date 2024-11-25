@@ -490,6 +490,61 @@ def convertHeadingToYaw(heading):
             y = heading - 360
         return y
 
+def clamp(value: float, minValue: float, maxValue: float):
+    return max(minValue, min(maxValue, value))
+
+def clampDelta(value: float, center: float, delta: float):
+    return clamp(value, center - delta, center + delta)
+
+def getAngle():
+    return inertial.rotation()
+
+def resetMotors():
+    wheelLeft.reset_position()
+    wheelRight.reset_position()
+
+def getMotorsRevolution():
+    return (wheelLeft.position(RotationUnits.REV) + wheelRight.position(RotationUnits.REV)) / 2.0
+
+def setMotorSpeeds(leftSpeed: float, rightSpeed: float):
+    wheelLeft.spin(DirectionType.FORWARD, leftSpeed, PERCENT)
+    wheelRight.spin(DirectionType.FORWARD, rightSpeed, PERCENT)
+
+def goCurve(targetAngle: float,
+            targetSpeed: float,
+            targetRevolutions: float,
+            maxAcceleration: float = 150.0,
+            maxAngleSpeed: float = 50.0,
+            maxAngleAcceleration: float = 300.0,
+            angleTolerance: float = 1.0,
+            kP: float = 1.0,
+            deltaTime: float = 20e-3):
+    def limitAcceleration(desired: float, current: float, maxAcceleration: float):
+        return clampDelta(desired, current, maxAcceleration*deltaTime)
+    
+    lastSpeed = 0.0
+    lastCorrection = 0.0
+    resetMotors()
+    
+    while True:
+        currentAngle = getAngle()
+        error = currentAngle - targetAngle
+        correction = kP * error
+        correction = clamp(correction, -maxAngleSpeed, maxAngleSpeed)
+        correction = limitAcceleration(correction, lastCorrection, maxAngleAcceleration)
+        achievedRevolutions = getMotorsRevolution() >= targetRevolutions
+        requiredSpeed = 0.0 if achievedRevolutions else targetSpeed
+        desiredSpeed = limitAcceleration(requiredSpeed, lastSpeed, maxAcceleration)
+        leftSpeed = clamp(desiredSpeed - correction, -100.0, 100.0)
+        rightSpeed = clamp(desiredSpeed + correction, -100.0, 100.0)
+        setMotorSpeeds(leftSpeed, rightSpeed)
+        lastSpeed = desiredSpeed
+        lastCorrection = correction
+        achievedDesiredAngle = abs(error) < angleTolerance
+        if desiredSpeed == 0.0 and achievedDesiredAngle:
+            break
+        wait(deltaTime, SECONDS)
+
 def goStraight(
                 inches: float,
                 velocity: float,
