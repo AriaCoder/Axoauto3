@@ -3,18 +3,9 @@
 from vex import *
 import time
 
-
-# AXOBOTL Python Code
-# Team 4028X Extreme Axolotls
-# 2023-25 VEX IQ Rapid Relay Challenge
-from vex import *
-
-
 # The Eye class is useful for us
 # Represents a Distance sensor that broadcasts if it "sees" an object
 
-# The Eye class is useful for us
-# Represents a Distance sensor that broadcasts if it "sees" an object
 class Eye:
     def __init__(self, portNumber: int, distanceThreshold: int, units: DistanceUnits.DistanceUnits = DistanceUnits.MM):
         self.sensor = Distance(portNumber)
@@ -66,14 +57,12 @@ buttBumper = Bumper(Ports.PORT8)
 ballHugger = Pneumatic(Ports.PORT10)
 screenColor: Color.DefinedColor = Color.BLUE
 penColor: Color.DefinedColor = Color.WHITE
-
 catBeltRunning: bool = False
 intakeRunning: bool = False
-
+cancelGoStraight: bool = False
 isContinuousCallback = None
 
 wait(15, MSEC)  # Allow events and everything else to initialize
-
 
 def setup():
     clearScreen()
@@ -163,7 +152,7 @@ def setupCatBelt(velocity: int = 100):
     updateMotor(catBeltLeft, velocity, brakeType=HOLD, spinNow=False)
     updateMotor(catBeltRight, velocity, brakeType=HOLD, spinNow=False)
     buttBumper.pressed(onBumperPressed)
-   # buttBumper.released(onBumperReleased)
+    #buttBumper.released(onBumperReleased)
     ballHugger.pump_on()
 
 def spinIntake(direction: DirectionType.DirectionType):
@@ -201,27 +190,6 @@ def onBumperPressed():
     ledLeft.set_color(Color.GREEN)
     buttBumperPressed.broadcast()
 
-    def windCat():  # Up Button
-        releaseHug()
-        catBeltLeft.spin(FORWARD)
-        catBeltRight.spin(FORWARD)
-        for _ in range(3 * 100):  # 3 seconds @ 10ms/loop
-            if isCatDown(): break
-            wait(10, MSEC)
-        # TODO: Check if we still need/want this. Tune it to new Gen3 bot?
-        # Spinning the catapult a little more because sensor placement can't go lower
-        catBeltRight.spin_for(FORWARD, 50, DEGREES, wait = False)
-        catBeltLeft.spin_for(FORWARD, 50, DEGREES)
-        stopCatAndBelt()
-
-def releaseCat(cancelRewind = None): # Down Button
-    releaseHug()
-    catBeltRight.spin_for(FORWARD, 180, DEGREES, wait=False)
-    catBeltLeft.spin_for(FORWARD, 180, DEGREES)
-    # cancelWinding lets the caller of releaseCat() know
-    # if winding should be cancelled (keeps tension off rubber bands)
-    if (cancelRewind is None or not cancelRewind()): windCat()
-
 def windCat():  # Up Button
     releaseHug()
     catBeltLeft.spin(FORWARD)
@@ -234,6 +202,14 @@ def windCat():  # Up Button
     catBeltRight.spin_for(FORWARD, 10, DEGREES, wait = False)
     catBeltLeft.spin_for(FORWARD, 10, DEGREES)
     stopCatAndBelt()
+
+def releaseCat(cancelRewind = None): # Down Button
+    releaseHug()
+    catBeltRight.spin_for(FORWARD, 180, DEGREES, wait=False)
+    catBeltLeft.spin_for(FORWARD, 180, DEGREES)
+    # cancelWinding lets the caller of releaseCat() know
+    # if winding should be cancelled (keeps tension off rubber bands)
+    if (cancelRewind is None or not cancelRewind()): windCat()
 
 def releaseHug(stop: bool = True):
     if stop: stopCatAndBelt()
@@ -274,34 +250,9 @@ def checkEyes():
 
 sensorThread = Thread(checkEyes)
 
-def run():
-    setup()
-    clearScreen()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-MODES = ["CALIBRATE", "4SWITCHES", "NEAR_GOAL", "REPEAT"]
-MODE_COLORS = [Color.CYAN, Color.YELLOW_GREEN, Color.BLUE, Color.VIOLET]
-MODE_PEN_COLORS = [Color.BLACK, Color.BLACK, Color.WHITE, Color. WHITE]
-
-  
-
-
-
-
-
+MODES = ["CALIBRATE", "4SWITCHES", "NEAR_GOAL"]
+MODE_COLORS = [Color.CYAN, Color.YELLOW_GREEN, Color.BLUE]
+MODE_PEN_COLORS = [Color.BLACK, Color.BLACK, Color.WHITE]
 
 
 
@@ -314,9 +265,6 @@ isAutoRunning = False
 isCalibrated = False
 modeNumber = 0
 cancelCalibration = False
-
-def runRepeat():
-    pass
 
 def onBrainButtonCheck():
     global isAutoRunning
@@ -338,8 +286,6 @@ def onBrainButtonCheck():
             run4Switches()
         elif modeNumber == 2:
             runNearGoal()
-        elif modeNumber == 3:
-            runRepeat()
         isAutoRunning = False
         print("Done")
 
@@ -377,13 +323,13 @@ def print( message):
     brain.screen.print(message)
     brain.screen.new_line()
 
-def setupAutoDriveTrain( calibrate=True):
+def setupAutoDriveTrain(calibrate=True):
     # Use DriveTrain in autonomous. Easier to do turns.
     # Last updated on Nov 14, 2023:
     # Track width: 7-7/8 inches (7.875)
     # Wheel base : 6-1/2 inches (6.5)
 
-    if not driveTrain:
+    if not DriveTrain:
         driveTrain = DriveTrain(wheelLeft,
                                         wheelRight,
                                         wheelTravel= 145,
@@ -393,7 +339,7 @@ def setupAutoDriveTrain( calibrate=True):
                                         externalGearRatio=2)  # TODO: Is this correct?
         if calibrate:
             windCat()
-            return calibrate()
+            return calibrate
         return True
 
 def calibrate():
@@ -551,7 +497,9 @@ def goStraight(
                 timeoutSecs: int = 0,
                 requiredYaw: float = 360, # Default of 360 means ignore
                 wheelDiameterMM: int = 200,
-                driveGearRatio: float = 0.5):
+                driveGearRatio: float = 0.5,
+                ):
+    cancelGoStraight = False
     taperTurns = 0.75     # Turns remaining on wheels before start tapering
     convertINtoMM = 25.4
     wheelDiameterMM = 200
@@ -629,17 +577,7 @@ def goStraight(
     wheelRight.stop()
     if cancelGoStraight:
         print("CANCELLED")
-    cancelGoStraight = False  # Reset this
-
-def autoTurn(direction, angle, units=RotationUnits.DEG,
-                velocity=50, units_v:VelocityPercentUnits=VelocityUnits.PERCENT, wait=True,
-                timeoutSecs=100):
-    if driveTrain is not None:
-        if timeoutSecs != 100:
-            driveTrain.set_timeout(timeoutSecs, TimeUnits.SECONDS)
-        driveTrain.turn_for(direction, angle / 2, units, velocity, units_v, wait)
-        if timeoutSecs != 100:  # Restore timeout for future driveTrain users
-            driveTrain.set_timeout(100, TimeUnits.SECONDS)
+        cancelGoStraight = False  # Reset this
 
 def run():
     setup()
@@ -657,7 +595,7 @@ def finishRun():
 
 def runCalibrate():
     setupAutoDriveTrain(calibrate=False)
-    # windCat()
+    windCat()
     calibrate()
 
 def autoLoop():
@@ -665,7 +603,7 @@ def autoLoop():
     goStraight(55, 65, timeoutSecs=5, requiredYaw=-90)
     goStraight(60, -65, timeoutSecs=5, requiredYaw=-90)
     goStraight(10, -15, timeoutSecs=5, requiredYaw=-90)
-    intake.stop(COAST)
+    #intake.stop(COAST)
     wait(100, MSEC)
     releaseCat()
     wait(100, MSEC)
@@ -673,34 +611,7 @@ def autoLoop():
     windCat()
 
 def run4Switches():
-    windCat()
-    goStraight(10, 30, timeoutSecs=5,requiredYaw=0)
-    goTurn90(20, 4) # Turns to face goal
-    goStraight(40, -40, timeoutSecs=5, requiredYaw=-90) # go back
-    startIntake()
-    goStraight(20, 40, timeoutSecs=3, requiredYaw=-90) #collects ball
-    goStraight(30, -60, timeoutSecs=5, requiredYaw=-90) #Drives to goal
-    intake.stop(COAST)
-    wait(1000,MSEC)
-    releaseCat()
-    wait(100,MSEC)
-    releaseCat()
-    windCat()
-    startIntake()
-    windCat()
-    goStraight(30,60,timeoutSecs=1, requiredYaw=-90)
-    goStraight(30, 60, timeoutSecs=3, requiredYaw=-90) #Away from goal
-    goTurn90(-30,4)
-    goStraight(47,60,timeoutSecs=2,requiredYaw=0)
-    goTurn90(40, 4) # Turns to face goal
-    goStraight(50, -40, timeoutSecs=5, requiredYaw=-90) #Drives to goal
-    releaseCat()
-    wait(100,MSEC)
-    releaseCat()
-    windCat()
-    stopAll()
-    goStraight(30, -100, timeoutSecs=2, requiredYaw=-90) # A little last push
-    stopAll()
+    pass
 
 def runNearGoal():
     windCat()
@@ -710,7 +621,7 @@ def runNearGoal():
     goStraight(40, -50, timeoutSecs=4, requiredYaw=-90) # go back
     #goStraight(20, 40, timeoutSecs=3, requiredYaw=-90) #collects ball
     goStraight(35, -50, timeoutSecs=5, requiredYaw=-90) #Drives to goal
-    intake.stop(COAST)
+    #intake.stop(COAST)
     wait(1000,MSEC)
     releaseCat()
     wait(100,MSEC)
@@ -718,17 +629,3 @@ def runNearGoal():
     windCat()
     for i in range(5):
         autoLoop()
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
